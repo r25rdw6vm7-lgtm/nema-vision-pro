@@ -11,3 +11,4 @@ export * from './knowledge';
 export * from './safety';
 export * from './analytics';
 export * from './roadmap';
+export * from './orchestrator';
