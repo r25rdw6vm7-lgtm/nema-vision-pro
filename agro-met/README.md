@@ -1,43 +1,64 @@
 # AGRO-MET Command Center
 
-AGRO-MET is the central, platform-neutral decision layer for agricultural early warning. The same TypeScript core can feed Android, iOS and Web/PWA clients.
+AGRO-MET is the central, platform-neutral decision layer for agricultural early warning. The same TypeScript core feeds Android, iOS and Web/PWA clients.
 
 ## Architecture
 
-- `core/agro-core.ts` is deterministic, explainable and independent of UI/platform APIs.
-- `app/` is an Expo Router client shared by Android, iOS and Web.
-- `early-warning/` contains the first standalone Early Warning prototype already created in this repository.
-- `.github/workflows/agro-met.yml` type-checks, exports Web and builds an Android debug APK.
+- `core/agro-core.ts`: deterministic, explainable, validated decision engine with no UI/platform dependency.
+- `app/`: Expo Router universal client shared by Android, iOS and Web.
+- `early-warning/`: standalone Early Warning prototype retained as a reference/legacy-compatible module.
+- `.github/workflows/agro-met-universal.yml`: dependency install, TypeScript validation, Expo health check and Web export.
+- `.github/workflows/agro-met.yml`: existing build pipeline retained for compatibility.
 
 ## Decision pipeline
 
-`Weather + Soil + Camera + Satellite + Phenology -> AgroCore -> Risk vectors -> Confidence -> Explainable actions`
+`Weather + Soil + Camera + Satellite + Phenology -> validation -> risk vectors -> confidence/data quality -> alerts -> prioritized actions -> 72h projection`
 
-Risk vectors are intentionally separated: disease, pest, water stress, heat stress and frost. A single overall score is derived only after the individual risks are calculated.
+Risk vectors remain separate: disease, pest, water stress, heat stress and frost. The overall score is derived only after those vectors are calculated.
+
+## Engineering guarantees
+
+1. **Input validation:** invalid percentages, negative weather values and malformed parcel identity fail fast.
+2. **Finite-number safety:** non-finite numeric inputs cannot silently poison the decision result.
+3. **Missing-data honesty:** absent sensors reduce confidence/data quality rather than inventing measurements.
+4. **Freshness awareness:** stale inputs reduce data quality and therefore confidence.
+5. **Explainability:** every major risk includes score, weight, reason and contributing sources.
+6. **Prioritized alerts:** high-risk factors become actionable alerts ordered by impact.
+7. **Forecast projection:** the same deterministic state produces a 72-hour risk trajectory.
+8. **UI isolation:** screens consume `AgroAssessment`; they do not contain the business rules.
+9. **Offline-safe core:** the risk engine has no network dependency and can run locally.
+10. **Cross-platform core:** no Expo, browser, Android or iOS API is required by the decision engine.
 
 ## Platform strategy
 
-Expo is used for the universal client because its current documentation supports Android, iOS and Web from one JavaScript/TypeScript project. Web is configured as a static standalone/PWA-style output. The domain logic has no dependency on Expo, React Native or browser APIs, so a future API, desktop shell or server worker can consume the same core types and rules.
+Expo is used for the universal client. Web is configured as a static standalone output, while the same project can target Android and iOS. The domain layer is independent, so a future API, desktop shell, background worker or server-side service can consume the same contracts and rules.
 
-## Stability principles
+## Production adapter boundary
 
-1. No hidden network dependency in the core risk calculation.
-2. Missing sensor signals reduce certainty instead of fabricating data.
-3. Every risk has an explicit reason and suggested action.
-4. UI is a presentation layer, not the source of truth.
-5. Production data connectors can be added behind adapters without changing the core model.
-6. CI must pass type-checking and Web export before release.
+The next integrations should implement explicit adapters for:
 
-## Next production adapters
+- meteorology and forecasts
+- automatic GNSS/device location
+- parcel boundaries and geospatial calculations
+- soil/IoT telemetry
+- camera/vision inference
+- satellite/remote sensing
+- notifications and escalation
+- authentication, organizations and roles
+- durable database
+- event and audit log
 
-- Meteorology provider adapter
-- GNSS/device location adapter
-- Parcel/geospatial adapter
-- Soil/IoT sensor adapter
-- Camera/vision inference adapter
-- Satellite/remote-sensing adapter
-- Notification adapter
-- Authentication and tenant/organization adapter
-- Durable database + event/audit log
+Adapters should normalize external data before it reaches `AgroCore`. The decision engine must remain provider-agnostic.
 
-The command center is deliberately built so these integrations can be introduced without rewriting the application UI or risk engine.
+## Quality gate
+
+Run from `agro-met/`:
+
+```bash
+npm install
+npm run typecheck
+npm run doctor
+npm run export:web
+```
+
+The GitHub Actions validation pipeline executes these checks on relevant pull requests and on `main` changes.
