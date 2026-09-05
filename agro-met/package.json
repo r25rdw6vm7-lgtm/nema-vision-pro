@@ -1,6 +1,6 @@
 {
   "name": "agro-met-command-center",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "export:web": "expo export --platform web",
     "typecheck": "tsc --noEmit",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "core:selftest": "node -e \"console.log('Core self-test is exported from core/self-test.ts; run it through the project TypeScript toolchain.')\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.0",
