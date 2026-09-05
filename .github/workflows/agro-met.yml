@@ -1,0 +1,62 @@
+name: AGRO-MET Universal Build
+
+on:
+  push:
+    branches: [main, 'feature/agro-*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agro-met
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: agro-met/package.json
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Export web
+        run: npx expo export --platform web
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agro-met-web
+          path: agro-met/dist
+
+  android-debug:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agro-met
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies
+        run: npm install
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --non-interactive
+      - name: Build debug APK
+        run: cd android && ./gradlew assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: agro-met-android-debug
+          path: agro-met/android/app/build/outputs/apk/debug/app-debug.apk
