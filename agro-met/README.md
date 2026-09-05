@@ -1,8 +1,8 @@
-# AGRO-MET Command Center 2.0
+# AGRO-MET Command Center ∞
 
-AGRO-MET is a platform-neutral agricultural intelligence and decision layer. It is designed to grow from a deterministic early-warning engine into a full agricultural operating system without coupling business rules to a specific UI, vendor or data provider.
+AGRO-MET is a platform-neutral agricultural intelligence and decision system. The architecture now contains a scalable capability registry, advanced signal fusion, digital farm twin, evidence/knowledge contracts, safety guardrails, analytics primitives, offline sync/event primitives and a long-term infinity roadmap.
 
-## 2.0 architecture
+## Intelligence pipeline
 
 ```text
 DEVICE / API / SENSOR / CAMERA / SATELLITE
@@ -13,107 +13,63 @@ DEVICE / API / SENSOR / CAMERA / SATELLITE
                  ↓
       PROVENANCE + FRESHNESS + QA
                  ↓
-        AGRO CORE / RISK VECTOR
+        MULTI-SIGNAL FUSION
                  ↓
-     FORECAST + FUSION + CONFIDENCE
+      RISK + FORECAST + UNCERTAINTY
+                 ↓
+        DIGITAL FARM TWIN
                  ↓
        DECISION + ACTION ENGINE
                  ↓
        ALERT / EVENT / AUDIT LOG
                  ↓
       UNIVERSAL COMMAND CENTER
-   Android · iOS · Web · PWA · future API
+                 ↓
+          RESULT MEASUREMENT
+                 ↓
+       LEARNING / CALIBRATION
+                 ↺
 ```
 
-### Current modules
+## Core modules
 
-- `core/agro-core.ts`: deterministic risk vectors, validation, confidence, data quality, explainability and 72-hour projection.
-- `core/contracts.ts`: canonical domain contracts for parcel, weather, forecast, soil, vision, satellite, traps, provenance, actions and events.
-- `core/adapters.ts`: provider-agnostic adapter boundary and demo adapters.
-- `core/decision-engine.ts`: assessment-to-action orchestration and event generation.
-- `core/runtime.ts`: refresh lifecycle, error isolation and last-known-good state.
-- `core/validation.ts`: reusable parcel, location and meteorology validation.
-- `core/self-test.ts`: deterministic core smoke checks.
-- `core/index.ts`: stable public core API.
-- `app/`: Expo universal client for Android, iOS, Web/PWA.
-- `early-warning/`: retained standalone prototype for compatibility/reference.
+- `core/agro-core.ts`: validated deterministic risk engine.
+- `core/contracts.ts`: canonical domain contracts and system state.
+- `core/adapters.ts`: provider-independent data boundary.
+- `core/advanced.ts`: VPD, ET0 proxy, degree-days, advanced risk vectors and confidence-weighted fusion.
+- `core/digital-twin.ts`: deterministic parcel/twin state and what-if scenarios.
+- `core/knowledge.ts`: evidence-aware knowledge index and safe answer contracts.
+- `core/safety.ts`: decision guardrails and high-impact human-approval gates.
+- `core/platform.ts`: offline sync queue, event log and audit primitives.
+- `core/analytics.ts`: trends, anomaly scores and weighted scoring.
+- `core/roadmap.ts`: executable catalog of the long-term capability roadmap.
+- `core/orchestrator.ts`: unified observation → decision → intelligence → digital-twin pipeline.
+- `core/runtime.ts`: resilient runtime with last-known-good state.
+- `app/`: Expo universal Android/iOS/Web/PWA command center.
+- `early-warning/`: retained legacy-compatible prototype.
 
-## Decision model
+## Covered intelligence domains
 
-The engine keeps disease, pest, water stress, heat stress and frost as separate risk vectors. Phenology remains an optional domain input and can progressively influence crop-specific rules without requiring a dedicated UI panel.
+Core, parcel, GNSS/location, meteorology, soil, crop and phenology, vision, disease, pest, weed, irrigation, nutrition, satellite, early warning, digital twin, decision intelligence, Agronomist AI, operations, economics, harvest, climate, knowledge, security, platform and robotics are represented as extensible capability domains. The registry is intentionally open-ended so new crops, risks, models, sensors, agents and decisions can be added without changing the UI contract.
 
-Every assessment carries:
+Phenology remains an optional decision input. It is not removed from the architecture and no dedicated phenology panel is required for the current phase.
 
-- risk vector scores
-- overall level
-- confidence
-- data quality
-- contributing sources
-- freshness awareness
-- explainable reasons
-- prioritized actions
-- alert events
-- 72-hour projection
+## Engineering guarantees
 
-## Engineering principles
+1. Invalid critical input is rejected.
+2. Non-finite values cannot silently poison scoring.
+3. Missing/stale sources reduce confidence instead of becoming fake measurements.
+4. Risk vectors remain separately inspectable.
+5. Evidence and provenance can travel with decisions.
+6. High-impact or low-confidence actions can require human approval.
+7. Offline primitives support local operation and later synchronization.
+8. Digital-twin scenarios are deterministic and explicitly labeled as simulations.
+9. Provider adapters remain outside the decision rules.
+10. The universal client consumes state rather than duplicating agronomic logic.
 
-1. **Provider agnostic:** no weather, map, camera, satellite or sensor vendor is embedded in the decision rules.
-2. **Fail closed on invalid critical data:** malformed identity and impossible measurements are rejected.
-3. **No fake certainty:** missing or stale sources reduce confidence/quality instead of becoming invented measurements.
-4. **Pure decision layer:** business rules can run locally, on a server, in a worker or inside tests.
-5. **Deterministic core:** identical valid inputs produce the same assessment.
-6. **Explainability first:** every major risk exposes score, weight, reason and source.
-7. **Actionability:** the system produces ranked operational actions, not only numbers.
-8. **Event driven growth:** alerts and assessment events provide a clean path to notifications, history and audit trails.
-9. **Offline capable:** the decision engine does not require a network connection.
-10. **Universal client:** one application surface can target Android, iOS and Web/PWA.
+## Reality boundary
 
-## Long-term expansion map
-
-The architecture is intentionally prepared for the complete roadmap:
-
-- Core platform, configuration, feature flags and tenant isolation
-- Parcel registry, boundaries, geometry, history and field operations
-- GNSS/location, reverse geocoding and geospatial calculations
-- Weather observations, forecasts, microclimate and nowcasting
-- Soil moisture, EC, pH, temperature and IoT telemetry
-- Crop/phenology knowledge and crop-specific thresholds
-- Camera target detection, disease, pest, weed and crop-state intelligence
-- Pest traps, degree-days, population trends and outbreak forecasting
-- Disease models, infection windows and pre-outbreak detection
-- Irrigation, water balance and root-zone decision support
-- Nutrition, fertilization and deficiency detection
-- Satellite NDVI/NDRE/NDMI, anomaly maps and change detection
-- Multi-risk early warning, parcel risk maps and regional radar
-- Digital twin and season timeline
-- Agronomist copilot and explainable recommendations
-- Before/after verification and intervention effectiveness
-- Work orders, tasks, field logs and team workflows
-- Yield, cost, revenue and treatment economics
-- Data fusion, confidence calibration and continuous learning
-- Notification, escalation, acknowledgement and alert fatigue controls
-- Offline sync, conflict resolution and last-known-good state
-- Authentication, organizations, roles, permissions and audit log
-- API/backend, durable storage, queues, scheduled jobs and observability
-- Advanced visualization, maps, timelines and command-center views
-- Multi-agent orchestration for specialist agricultural reasoning
-
-The system should add these capabilities through adapters and modules rather than rewriting the decision layer.
-
-## Production integration order
-
-1. Real device location and parcel service
-2. Real meteorology/forecast adapter
-3. Durable local cache + offline sync
-4. Camera inference adapter
-5. Satellite adapter
-6. Soil/IoT adapter
-7. Crop-specific disease/pest models
-8. Notification and escalation service
-9. Authentication + multi-tenant backend
-10. Historical learning, calibration and digital twin
-
-No module should claim live data until its adapter is actually connected and its provenance is visible in the UI.
+The code now provides the architecture and deterministic local engines for the full roadmap. External services such as live weather, production GNSS/RTK, satellite providers, camera inference models, IoT gateways, notifications, authentication and durable cloud storage must still be connected through their adapters. The application must never represent demo data as live data.
 
 ## Quality gate
 
@@ -124,4 +80,4 @@ npm run doctor
 npm run export:web
 ```
 
-CI validates TypeScript, Expo health and Web export. The existing NEMA Vision Pro Android APK workflow remains separate and is not replaced by the universal AGRO-MET client.
+The existing NEMA Vision Pro APK workflow remains separate from the universal AGRO-MET client.
