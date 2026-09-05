@@ -1,10 +1,10 @@
-/* NEMA Drive Navigation - Traffic Intelligence Core v2
+/* NEMA Drive Navigation - Traffic Intelligence Core v3
  * Multi-signal lawful Green Wave + vehicle/Bluetooth bridge.
  * Never recommends exceeding an applicable legal speed limit.
  */
 (function(){
   'use strict';
-  const state={signals:[],enabled:true,legalOnly:true,vehicle:{speedKmh:null,rpm:null,gear:null,batteryV:null,source:null,timestamp:null}};
+  const state={signals:[],enabled:true,legalOnly:true,vehicle:{speedKmh:null,rpm:null,gear:null,batteryV:null,source:null,timestamp:null},bluetoothDevice:null,bluetoothServer:null};
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
   const num=(v,d=null)=>Number.isFinite(Number(v))?Number(v):d;
   const kmhToMs=k=>Math.max(0,k)/3.6;
@@ -18,8 +18,8 @@
 
   function greenWindow(signal,legalLimitKmh){
     const s=normalizeSignal(signal); if(s.phase!=='red'||!Number.isFinite(s.remainingSec))return null;
-    const limit=clamp(Math.min(num(legalLimitKmh,50),s.speedLimitKmh??num(legalLimitKmh,50)),5,160);
-    const start=Math.max(.5,s.remainingSec),end=start+s.greenDurationSec;
+    const requested=num(legalLimitKmh,50); const signalLimit=s.speedLimitKmh==null?requested:Math.min(requested,s.speedLimitKmh);
+    const limit=clamp(signalLimit,5,160); const start=Math.max(.5,s.remainingSec),end=start+s.greenDurationSec;
     const minKmh=clamp(msToKmh(s.distanceM/end),5,limit),maxKmh=clamp(msToKmh(s.distanceM/start),5,limit);
     if(minKmh>maxKmh||arrivalAt(s.distanceM,limit)>end)return null;
     return {minKmh:Math.round(minKmh),maxKmh:Math.round(maxKmh),greenStartSec:s.remainingSec,greenEndSec:end};
@@ -45,10 +45,22 @@
     return {status:'unknown',message:'Işık zamanlaması doğrulanamadı.'};
   }
 
-  function ingestVehicle(packet){if(!packet)return null;state.vehicle={speedKmh:num(packet.speedKmh),rpm:num(packet.rpm),gear:packet.gear??null,batteryV:num(packet.batteryV),source:packet.source||'bluetooth',timestamp:Date.now()};if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('nema:vehicle-data',{detail:state.vehicle}));return state.vehicle;}
+  function ingestVehicle(packet){
+    if(!packet)return null;
+    state.vehicle={speedKmh:num(packet.speedKmh),rpm:num(packet.rpm),gear:packet.gear??null,batteryV:num(packet.batteryV),source:packet.source||'bluetooth',timestamp:Date.now()};
+    if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('nema:vehicle-data',{detail:state.vehicle}));
+    return state.vehicle;
+  }
   function bluetoothSupported(){return typeof navigator!=='undefined'&&!!navigator.bluetooth;}
-  async function connectBluetooth(){if(!bluetoothSupported())throw new Error('Web Bluetooth bu tarayıcıda kullanılamıyor. iOS üretim uygulamasında CoreBluetooth/native bridge gerekir.');const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true});const server=await device.gatt.connect();state.bluetoothDevice=device;state.bluetoothServer=server;return {name:device.name||'Bluetooth cihazı',connected:true};}
-  async function disconnectBluetooth(){if(state.bluetoothDevice?.gatt?.connected)state.bluetoothDevice.gatt.disconnect();state.bluetoothDevice=null;state.bluetoothServer=null;}
+  async function connectBluetooth(){
+    if(!bluetoothSupported())throw new Error('Web Bluetooth bu tarayıcıda kullanılamıyor. iOS üretim uygulamasında CoreBluetooth/native bridge gerekir.');
+    const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true});
+    const server=await device.gatt.connect();
+    state.bluetoothDevice=device;state.bluetoothServer=server;
+    device.addEventListener('gattserverdisconnected',()=>{state.bluetoothDevice=null;state.bluetoothServer=null;if(typeof window!=='undefined')window.dispatchEvent(new Event('nema:bluetooth-disconnected'));});
+    return {name:device.name||'Bluetooth cihazı',connected:true};
+  }
+  async function disconnectBluetooth(){if(state.bluetoothDevice?.gatt?.connected)state.bluetoothDevice.gatt.disconnect();state.bluetoothDevice=null;state.bluetoothServer=null;if(typeof window!=='undefined')window.dispatchEvent(new Event('nema:bluetooth-disconnected'));return {connected:false};}
 
   window.NEMATrafficLights={state,addSignal,setSignals,clear,arrivalAt,greenWindow,recommend,next,optimize};
   window.NEMAGreenWave=window.NEMATrafficLights;
