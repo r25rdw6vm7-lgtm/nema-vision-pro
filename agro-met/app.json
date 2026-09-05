@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "AGRO-MET Command Center",
+    "slug": "agro-met-command-center",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "scheme": "agromet",
+    "platforms": ["ios", "android", "web"],
+    "plugins": ["expo-router"],
+    "android": {
+      "package": "com.agromet.commandcenter"
+    },
+    "ios": {
+      "bundleIdentifier": "com.agromet.commandcenter"
+    },
+    "web": {
+      "output": "static",
+      "name": "AGRO-MET Command Center",
+      "shortName": "AGRO-MET",
+      "display": "standalone",
+      "startUrl": "/",
+      "orientation": "any"
+    }
+  }
+}
