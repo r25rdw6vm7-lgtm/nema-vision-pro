@@ -1,0 +1,45 @@
+name: AGRO-MET Universal Validation
+
+on:
+  pull_request:
+    paths:
+      - 'agro-met/**'
+      - '.github/workflows/agro-met-universal.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'agro-met/**'
+      - '.github/workflows/agro-met-universal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agro-met
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: agro-met/package.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Expo doctor
+        run: npm run doctor -- --non-interactive
+
+      - name: Web export
+        run: npm run export:web
