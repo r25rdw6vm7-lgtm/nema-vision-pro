@@ -1,6 +1,6 @@
 {
   "name": "agro-met-command-center",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -8,7 +8,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "export:web": "expo export --platform web",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.0",
