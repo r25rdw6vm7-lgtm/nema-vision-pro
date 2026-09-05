@@ -1,6 +1,6 @@
 {
   "name": "agro-met-command-center",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -11,7 +11,7 @@
     "export:web": "expo export --platform web",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
-    "core:selftest": "node -e \"console.log('Core self-test is exported from core/self-test.ts; run it through the project TypeScript toolchain.')\""
+    "core:selftest": "node -e \"console.log('Core self-test requires the TypeScript toolchain; run npm run typecheck before invoking it in CI.')\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.0",
@@ -19,6 +19,7 @@
     "expo-router": "~6.0.0",
     "expo-status-bar": "~3.0.0",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.4",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
