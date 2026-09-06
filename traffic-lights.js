@@ -1,4 +1,4 @@
-/* NEMA Drive Navigation - Traffic Intelligence Core v3
+/* NEMA Drive Navigation - Traffic Intelligence Core v4
  * Multi-signal lawful Green Wave + vehicle/Bluetooth bridge.
  * Never recommends exceeding an applicable legal speed limit.
  */
@@ -10,7 +10,7 @@
   const kmhToMs=k=>Math.max(0,k)/3.6;
   const msToKmh=v=>Math.max(0,v)*3.6;
   const arrivalAt=(distanceM,speedKmh)=>{const v=kmhToMs(speedKmh);return v>0?distanceM/v:Infinity;};
-  function normalizeSignal(s){return {id:s.id||('signal-'+Math.random().toString(36).slice(2)),distanceM:Math.max(0,num(s.distanceM,0)),phase:s.phase||'unknown',remainingSec:num(s.remainingSec),greenDurationSec:Math.max(1,num(s.greenDurationSec,30)),cycleSec:Math.max(1,num(s.cycleSec,90)),speedLimitKmh:num(s.speedLimitKmh),confidence:s.confidence||'unknown',source:s.source||'unknown'};}
+  function normalizeSignal(s){return {id:s.id||('signal-'+Math.random().toString(36).slice(2)),distanceM:Math.max(0,num(s.distanceM,0)),phase:s.phase||'unknown',remainingSec:num(s.remainingSec),greenDurationSec:Math.max(1,num(s.greenDurationSec,30)),cycleSec:Math.max(1,num(s.cycleSec,90)),speedLimitKmh:num(s.speedLimitKmh),confidence:s.confidence||'unknown',source:s.source||'unknown',updatedAt:num(s.updatedAt,Date.now())};}
   function addSignal(s){if(!s||!Number.isFinite(Number(s.distanceM)))return false;state.signals.push(normalizeSignal(s));state.signals.sort((a,b)=>a.distanceM-b.distanceM);return true;}
   function setSignals(list){state.signals=(list||[]).filter(s=>Number.isFinite(Number(s.distanceM))).map(normalizeSignal).sort((a,b)=>a.distanceM-b.distanceM);return state.signals;}
   function clear(){state.signals.length=0;}
@@ -23,5 +23,5 @@
   async function connectBluetooth(){if(!bluetoothSupported())throw new Error('Web Bluetooth bu tarayıcıda kullanılamıyor. iOS üretim uygulamasında CoreBluetooth/native bridge gerekir.');const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true});const server=await device.gatt.connect();state.bluetoothDevice=device;state.bluetoothServer=server;device.addEventListener('gattserverdisconnected',()=>{state.bluetoothDevice=null;state.bluetoothServer=null;if(typeof window!=='undefined')window.dispatchEvent(new Event('nema:bluetooth-disconnected'));});return {name:device.name||'Bluetooth cihazı',connected:true};}
   async function disconnectBluetooth(){if(state.bluetoothDevice?.gatt?.connected)state.bluetoothDevice.gatt.disconnect();state.bluetoothDevice=null;state.bluetoothServer=null;if(typeof window!=='undefined')window.dispatchEvent(new Event('nema:bluetooth-disconnected'));return {connected:false};}
   window.NEMATrafficLights={state,addSignal,setSignals,clear,arrivalAt,greenWindow,recommend,next,optimize};window.NEMAGreenWave=window.NEMATrafficLights;window.NEMAVehicle={state,ingestVehicle,bluetoothSupported,connectBluetooth,disconnectBluetooth};
-  if(typeof document!=='undefined'){const load=()=>{if(window.NEMADriveEnhancements||document.querySelector('script[data-nema-enhancements]'))return;const s=document.createElement('script');s.src='nema-drive-enhancements.js';s.async=true;s.dataset.nemaEnhancements='1';document.head.appendChild(s);};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();}
+  if(typeof document!=='undefined'){const load=()=>{if(window.NEMADataProviders||document.querySelector('script[data-nema-data-providers]'))return;const s=document.createElement('script');s.src='navigation-data-providers.js';s.async=true;s.dataset.nemaDataProviders='1';document.head.appendChild(s);};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();}
 })();
