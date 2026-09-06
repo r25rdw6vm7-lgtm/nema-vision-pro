@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --input-type=module - <<'NODE'
+          node - <<'NODE'
           const fs=require('fs'),vm=require('vm');
           const files=['nema-predictive-engine.js','nema-spatial-engine.js','nema-confidence-engine.js','nema-ai-assistant.js','navigation-model-v2.js','traffic-engine.js','navigation-vision-engine.js','nema-drive-map-core.js','nema-drive-offline-routing.js','nema-native-bridge.js','map-provider.js','nema-real-data-gateway.js','nema-platform-orchestrator.js'];
           const context={window:{},navigator:{onLine:true},Date,Math,Number,console,CustomEvent:function(){}}; vm.createContext(context);
