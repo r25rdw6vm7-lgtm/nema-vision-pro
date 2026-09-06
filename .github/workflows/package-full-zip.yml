@@ -1,0 +1,27 @@
+name: Package Full NEMA Drive ZIP
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create full project ZIP
+        shell: bash
+        run: |
+          zip -qr "NEMA-Drive-main-${GITHUB_SHA::7}.zip" . \
+            -x '.git/*' \
+            -x '*.osm.pbf'
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEMA-Drive-full-project
+          path: NEMA-Drive-main-*.zip
+          retention-days: 7
