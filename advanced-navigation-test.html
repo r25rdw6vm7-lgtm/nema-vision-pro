@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>NEMA Advanced Navigation Tests</title><pre id="out">Çalışıyor…</pre><script src="navigation-advanced-engine.js"></script><script>
+(async()=>{
+ const out=document.getElementById('out'),results=[];const test=(name,fn)=>{try{const v=fn();results.push([name,!!v,v]);}catch(e){results.push([name,false,e.message]);}};
+ test('preferences',()=>NEMAAdvancedNavigation.setPreferences({mode:'shortest',avoidTolls:true}).mode==='shortest');
+ test('waypoint validation',()=>NEMAAdvancedNavigation.setWaypoints([{lat:39,lon:32,label:'A'},{lat:100,lon:32}]).length===1);
+ test('route ranking',()=>NEMAAdvancedNavigation.chooseRoute([{distanceM:10000,durationSec:900},{distanceM:8000,durationSec:1200}]).selected.distanceM===8000);
+ test('incident normalization',()=>NEMAAdvancedNavigation.normalizeIncident({lat:39,lon:32,type:'roadwork'}).type==='roadwork');
+ test('community report is unverified',()=>NEMAAdvancedNavigation.reportIncident({lat:39,lon:32,type:'hazard'}).verified===false);
+ test('lane guidance',()=>NEMAAdvancedNavigation.laneGuidance([{allowed:['straight']},{allowed:['left','straight']}],1).recommendedIndex===1);
+ test('landmark guidance',()=>NEMAAdvancedNavigation.landmarkGuidance([{name:'Market',distanceM:120}]).next.name==='Market');
+ test('energy estimate',()=>NEMAAdvancedNavigation.energyEstimate({distanceM:100,consumptionPer100:20}).estimatedConsumption>0);
+ out.textContent=results.map(r=>`${r[1]?'PASS':'FAIL'} ${r[0]}${r[1]?'':' :: '+r[2]}`).join('\n');
+})();
+</script>
