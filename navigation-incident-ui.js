@@ -1,0 +1,11 @@
+/* NEMA Drive incident/safety UI bridge v1 */
+(function(){'use strict';
+ const TYPES={accident:'Kaza',roadwork:'Yol çalışması',closure:'Yol kapanması',hazard:'Tehlike',traffic:'Trafik',speedCheck:'Hız kontrolü',laneClosure:'Şerit kapanması'};
+ const state={visible:true,events:[],lastReportAt:0};
+ function normalize(e){if(!e||!Number.isFinite(Number(e.lat))||!Number.isFinite(Number(e.lon)))return null;return {id:e.id||`incident-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type:e.type||'hazard',label:TYPES[e.type]||'Yol olayı',lat:Number(e.lat),lon:Number(e.lon),distanceM:Number.isFinite(Number(e.distanceM))?Number(e.distanceM):null,confidence:Math.max(0,Math.min(100,Number(e.confidence??50))),source:e.source||'unknown',verified:e.verified===true,expiresAt:Number(e.expiresAt)||null,reportedAt:Number(e.reportedAt)||Date.now()};}
+ function ingest(list){state.events=(Array.isArray(list)?list:[]).map(normalize).filter(Boolean);window.dispatchEvent(new CustomEvent('nema:incidents',{detail:state.events}));return state.events;}
+ function report(type,position,extra={}){if(!position)return {ok:false,error:'Konum gerekli'};const now=Date.now();if(now-state.lastReportAt<10000)return {ok:false,error:'Rapor sıklığı sınırı'};const e=normalize({...extra,type,lat:position.lat,lon:position.lon,source:'user',confidence:45,verified:false,reportedAt:now,expiresAt:now+3600000});state.lastReportAt=now;state.events.push(e);window.dispatchEvent(new CustomEvent('nema:incident-report',{detail:e}));return {ok:true,event:e};}
+ function confirm(id,stillThere){const e=state.events.find(x=>x.id===id);if(!e)return {ok:false,error:'Olay bulunamadı'};e.confirmations=(e.confirmations||0)+(stillThere?1:-1);e.confidence=Math.max(0,Math.min(100,e.confidence+(stillThere?8:-12)));if(e.confidence>=75)e.verified=true;if(!stillThere&&e.confidence<35)e.expiresAt=Date.now();window.dispatchEvent(new CustomEvent('nema:incident-confirm',{detail:e}));return {ok:true,event:e};}
+ function active(){const now=Date.now();return state.events.filter(e=>!e.expiresAt||e.expiresAt>now).sort((a,b)=>(a.distanceM??Infinity)-(b.distanceM??Infinity));}
+ window.NEMAIncidentUI={state,types:TYPES,normalize,ingest,report,confirm,active};
+})();
