@@ -1,4 +1,4 @@
-/* NEMA Drive Navigation - Live Data Layer v2
+/* NEMA Drive Navigation - Live Data Layer v3
  * Real map-derived speed limits, speed cameras and traffic-signal locations.
  * OSM/Overpass data is map data, not an official enforcement authority feed.
  * No fabricated traffic values. Traffic remains unknown until a configured provider supplies it.
@@ -11,7 +11,7 @@
   const now=()=>Date.now();
   const haversine=(a,b,c,d)=>{const R=6371000,p=Math.PI/180,da=(c-a)*p,db=(d-b)*p,x=Math.sin(da/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(db/2)**2;return 2*R*Math.asin(Math.sqrt(Math.max(0,x)));};
   const pointDistance=(lat,lon,p)=>haversine(lat,lon,p.lat,p.lon);
-  function parseMaxspeed(raw){if(raw==null)return null;const s=String(raw).trim().toLowerCase();if(!s||s==='none'||s==='signals'||s==='variable')return null;const m=s.match(/(\d+(?:[.,]\d+)?)/);if(!m)return null;let v=Number(m[1].replace(',','.'));if(/mph/.test(s))v*=1.609344;if(v<5||v>160)return null;return Math.round(v);}
+  function parseMaxspeed(raw){if(raw==null)return null;const s=String(raw).trim().toLowerCase();if(!s||s==='none'||s==='signals'||s==='variable'||s==='unknown')return null;const m=s.match(/(\d+(?:[.,]\d+)?)/);if(!m)return null;let v=Number(m[1].replace(',','.'));if(/mph/.test(s))v*=1.609344;if(v<5||v>160)return null;return Math.round(v);}
   function nearestOnWay(lat,lon,geometry){if(!Array.isArray(geometry)||!geometry.length)return Infinity;let best=Infinity;for(const p of geometry){if(Number.isFinite(p.lat)&&Number.isFinite(p.lon))best=Math.min(best,pointDistance(lat,lon,p));}return best;}
   function normalizeEnforcement(el,lat,lon){if(el.type!=='node'||el.tags?.highway!=='speed_camera')return null;const distance=pointDistance(lat,lon,{lat:num(el.lat),lon:num(el.lon)});if(!Number.isFinite(distance)||distance>cfg.radiusEnforcementM)return null;return {id:'osm-camera-'+el.id,type:'speed_camera',distanceM:Math.round(distance),limitKmh:parseMaxspeed(el.tags?.maxspeed),source:'OSM',confidence:'map',verified:false,updatedAt:now()};}
   function normalizeSignal(el,lat,lon){if(el.type!=='node'||el.tags?.highway!=='traffic_signals')return null;const distance=pointDistance(lat,lon,{lat:num(el.lat),lon:num(el.lon)});if(!Number.isFinite(distance)||distance>cfg.radiusEnforcementM)return null;return {id:'osm-signal-'+el.id,distanceM:Math.round(distance),phase:'unknown',remainingSec:null,greenDurationSec:null,cycleSec:null,source:'OSM',confidence:'map',updatedAt:now()};}
