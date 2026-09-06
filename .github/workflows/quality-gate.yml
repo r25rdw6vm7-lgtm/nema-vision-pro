@@ -51,7 +51,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in nema-drive-offline-routing.js nema-native-bridge.js nema-here-native-contract.js nema-platform-orchestrator.js nema-real-data-gateway.js navigation-advanced-engine.js navigation-model-v2.js navigation-poi-engine.js navigation-personalization.js navigation-data-contracts.js navigation-incident-ui.js navigation-vision-engine.js navigation-sharing.js navigation-ev-engine.js nema-predictive-engine.js nema-spatial-engine.js nema-confidence-engine.js nema-ai-assistant.js navigation-ui-advanced.js navigation-platform-test.html navigation-advanced-test.html data/turkey-offline-manifest.json native/ios/NEMADataBridge.swift native/ios/NEMACarPlayController.swift native/android/NemaDataBridge.kt native/android/NemaAndroidAutoService.kt native/android/NemaAndroidAutoSession.kt; do test -f "$f"; done
+          for f in nema-drive-offline-routing.js nema-native-bridge.js nema-here-native-contract.js nema-platform-orchestrator.js nema-real-data-gateway.js nema-premium-navigation-suite.js navigation-advanced-engine.js navigation-model-v2.js navigation-poi-engine.js navigation-personalization.js navigation-data-contracts.js navigation-incident-ui.js navigation-vision-engine.js navigation-sharing.js navigation-ev-engine.js nema-predictive-engine.js nema-spatial-engine.js nema-confidence-engine.js nema-ai-assistant.js navigation-ui-advanced.js navigation-platform-test.html navigation-advanced-test.html data/turkey-offline-manifest.json native/ios/NEMADataBridge.swift native/ios/NEMACarPlayController.swift native/android/NemaDataBridge.kt native/android/NemaAndroidAutoService.kt native/android/NemaAndroidAutoSession.kt; do test -f "$f"; done
       - name: Run unified platform smoke test
         shell: bash
         run: |
@@ -61,7 +61,7 @@ jobs:
           const files=['nema-predictive-engine.js','nema-spatial-engine.js','nema-confidence-engine.js','nema-ai-assistant.js','navigation-model-v2.js','traffic-engine.js','navigation-vision-engine.js','nema-drive-map-core.js','nema-drive-offline-routing.js','nema-native-bridge.js','map-provider.js','nema-real-data-gateway.js','nema-platform-orchestrator.js'];
           const context={window:{},navigator:{onLine:true},Date,Math,Number,console,CustomEvent:function(){}}; vm.createContext(context);
           for(const f of files) vm.runInContext(fs.readFileSync(f,'utf8'),context,{filename:f});
-          const w=context.window;
+          w=context.window;
           w.NEMAPredictive.ingest({speedKmh:30,delaySec:40,confidence:90,timestamp:Date.now()});
           if(!w.NEMAPredictive.predict()) throw new Error('predictive engine failed');
           w.NEMASpatial.ingest([{id:'x',type:'landmark',distanceM:80,name:'Kavşak'}]);
