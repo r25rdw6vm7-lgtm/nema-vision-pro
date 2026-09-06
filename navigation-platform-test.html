@@ -1,1 +1,29 @@
-<!doctype html><meta charset="utf-8"><title>NEMA Platform Test</title><script>window.NEMAPlatform={health:()=>({ready:true})}</script><script src="nema-platform-orchestrator.js"></script><script>document.body.textContent='NEMA Platform Test: '+JSON.stringify(window.NEMAPlatform.health());</script>
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEMA Platform Test</title>
+<style>body{font-family:system-ui;background:#08111d;color:#eef;padding:24px}pre{white-space:pre-wrap;background:#101d2c;padding:16px;border-radius:12px}</style>
+<h1>NEMA Platform Integration Test</h1><pre id="out">Loading...</pre>
+<script src="navigation-core.js"></script>
+<script src="traffic-engine.js"></script>
+<script src="navigation-model-v2.js"></script>
+<script src="navigation-vision-engine.js"></script>
+<script src="nema-drive-map-core.js"></script>
+<script src="nema-drive-offline-routing.js"></script>
+<script src="nema-native-bridge.js"></script>
+<script src="map-provider.js"></script>
+<script src="nema-real-data-gateway.js"></script>
+<script src="nema-platform-orchestrator.js"></script>
+<script>
+(function(){
+ const checks=[];
+ const ok=(name,value)=>checks.push({name,ok:!!value});
+ ok('Unified real-data gateway',!!window.NEMARealData);
+ ok('Platform orchestrator',!!window.NEMAPlatform);
+ ok('Traffic engine',!!window.NEMATrafficEngine);
+ ok('Vision engine',!!window.NEMAVision);
+ ok('Offline routing contract',!!window.NEMAOfflineRouting);
+ ok('Native bridge',!!window.NEMANativeBridge);
+ ok('3D/map provider',!!window.NEMAMapProvider);
+ const health=window.NEMAPlatform.health();
+ const payload={checks,health,realData:window.NEMARealData.status()};
+ document.getElementById('out').textContent=JSON.stringify(payload,null,2);
+})();
+</script>
