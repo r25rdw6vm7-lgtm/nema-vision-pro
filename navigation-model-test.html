@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>NEMA Navigation Model Test</title><pre id="out">running...</pre><script src="navigation-model-v2.js"></script><script src="navigation-poi-engine.js"></script><script src="navigation-personalization.js"></script><script src="navigation-data-contracts.js"></script><script>
+const out=document.getElementById('out');const results=[];function t(name,fn){try{const v=fn();results.push({name,ok:v!==false,error:null});}catch(e){results.push({name,ok:false,error:e.message});}};
+t('model snapshot',()=>NEMANavigationModel.snapshot().version===2);
+t('model ingest',()=>NEMANavigationModel.ingest({gpsConfidence:90,routeConfidence:90,dataConfidence:80}).confidence>0);
+t('POI favorite',()=>{NEMAPOI.addFavorite({lat:39.9,lon:32.8,name:'Test'});return NEMAPOI.all().favorites.length>0});
+t('personal ETA baseline',()=>NEMAPersonalization.eta(600)===600);
+t('personal ETA learning',()=>{for(let i=0;i<5;i++)NEMAPersonalization.recordTrip({plannedSec:600,actualSec:660});return NEMAPersonalization.eta(600)>600});
+t('data contracts',()=>NEMADataContracts.poi({name:'X',lat:39.9,lon:32.8}).verified===false);
+out.textContent=results.map(x=>(x.ok?'PASS ':'FAIL ')+x.name+(x.error?' • '+x.error:'')).join('\n')+'\n\n'+(results.every(x=>x.ok)?'ALL SMOKE TESTS PASS':'FAILURES PRESENT');
+</script>
