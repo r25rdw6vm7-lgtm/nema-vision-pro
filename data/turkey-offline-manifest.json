@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "region": "TR",
+  "status": "source-pipeline-ready",
+  "source": {
+    "provider": "OpenStreetMap",
+    "extract": "Geofabrik Turkey",
+    "license": "ODbL",
+    "refresh": "daily-source-eligible"
+  },
+  "artifacts": {
+    "rawPbf": null,
+    "renderPack": null,
+    "routingPack": null
+  },
+  "engines": {
+    "mapRendering": null,
+    "routing": null,
+    "mapMatching": "nema-web-core"
+  },
+  "integrity": {
+    "sha256": null,
+    "generatedAt": null
+  },
+  "policy": {
+    "neverTreatRawPbfAsRoutable": true,
+    "trafficIsNotBundledAsStaticLiveData": true,
+    "officialEnforcementRequiresVerifiedProvider": true
+  }
+}
