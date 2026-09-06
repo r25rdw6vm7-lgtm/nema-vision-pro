@@ -1,0 +1,110 @@
+/* NEMA Drive Navigation - Live Data Layer v1
+ * Real map-derived speed limits, speed cameras and traffic-signal locations.
+ * OSM/Overpass data is map data, not an official enforcement authority feed.
+ * No fabricated traffic values. Traffic remains unknown until a configured provider supplies it.
+ */
+(function(){
+  'use strict';
+  const state={enabled:true,provider:'osm-overpass',lastSync:0,lastError:null,position:null,trafficProvider:null,trafficLastSync:0};
+  const cfg={
+    overpassUrl:'https://overpass-api.de/api/interpreter',
+    radiusRoadM:90,
+    radiusEnforcementM:1800,
+    refreshMs:20000,
+    trafficUrl:null,
+    trafficHeaders:{}
+  };
+  const num=(v,d=null)=>Number.isFinite(Number(v))?Number(v):d;
+  const now=()=>Date.now();
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const haversine=(a,b,c,d)=>{const R=6371000,p=Math.PI/180,da=(c-a)*p,db=(d-b)*p,x=Math.sin(da/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(db/2)**2;return 2*R*Math.asin(Math.sqrt(Math.max(0,x)));};
+  const pointDistance=(lat,lon,p)=>haversine(lat,lon,p.lat,p.lon);
+  function parseMaxspeed(raw){
+    if(raw==null)return null;
+    const s=String(raw).trim().toLowerCase();
+    if(!s||s==='none'||s==='signals'||s==='variable')return null;
+    const m=s.match(/(\\d+(?:[.,]\\d+)?)/);
+    if(!m)return null;
+    let v=Number(m[1].replace(',','.'));
+    if(/mph/.test(s))v*=1.609344;
+    if(v<5||v>160)return null;
+    return Math.round(v);
+  }
+  function nearestOnWay(lat,lon,geometry){
+    if(!Array.isArray(geometry)||!geometry.length)return Infinity;
+    let best=Infinity;
+    for(const p of geometry){if(Number.isFinite(p.lat)&&Number.isFinite(p.lon))best=Math.min(best,pointDistance(lat,lon,p));}
+    return best;
+  }
+  function normalizeEnforcement(el,lat,lon){
+    if(el.type!=='node'||el.tags?.highway!=='speed_camera')return null;
+    const distance=pointDistance(lat,lon,{lat:num(el.lat),lon:num(el.lon)});
+    if(!Number.isFinite(distance)||distance>cfg.radiusEnforcementM)return null;
+    return {id:'osm-camera-'+el.id,type:'speed_camera',distanceM:Math.round(distance),limitKmh:parseMaxspeed(el.tags?.maxspeed),source:'OSM',confidence:'map',verified:false,updatedAt:now()};
+  }
+  function normalizeSignal(el,lat,lon){
+    if(el.type!=='node'||el.tags?.highway!=='traffic_signals')return null;
+    const distance=pointDistance(lat,lon,{lat:num(el.lat),lon:num(el.lon)});
+    if(!Number.isFinite(distance)||distance>cfg.radiusEnforcementM)return null;
+    return {id:'osm-signal-'+el.id,distanceM:Math.round(distance),phase:'unknown',remainingSec:null,greenDurationSec:30,cycleSec:90,source:'OSM',confidence:'map',updatedAt:now()};
+  }
+  function nearestSpeedLimit(elements,lat,lon){
+    const candidates=[];
+    for(const el of elements||[]){
+      if(el.type!=='way'||!el.tags?.highway)continue;
+      const value=parseMaxspeed(el.tags?.maxspeed);
+      if(value==null)continue;
+      const geometry=(el.geometry||[]).map(p=>({lat:num(p.lat),lon:num(p.lon)})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+      const distance=nearestOnWay(lat,lon,geometry);
+      if(distance<=cfg.radiusRoadM)candidates.push({distance,value,wayId:el.id,highway:el.tags.highway});
+    }
+    candidates.sort((a,b)=>a.distance-b.distance);
+    const best=candidates[0];
+    if(!best)return null;
+    return {value:best.value,unit:'km/h',source:'OSM',confidence:'map',temporary:false,updatedAt:now(),distanceM:Math.round(best.distance),wayId:best.wayId,highway:best.highway};
+  }
+  async function fetchWithTimeout(url,options={},timeoutMs=9000){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeoutMs);try{return await fetch(url,{...options,signal:c.signal});}finally{clearTimeout(t);}}
+  async function overpass(lat,lon){
+    const q=`[out:json][timeout:8];(way(around:${cfg.radiusRoadM},${lat},${lon})[highway][maxspeed];node(around:${cfg.radiusEnforcementM},${lat},${lon})[highway=speed_camera];node(around:${cfg.radiusEnforcementM},${lat},${lon})[highway=traffic_signals];);out tags geom;`;
+    const r=await fetchWithTimeout(cfg.overpassUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','Accept':'application/json'},body:'data='+encodeURIComponent(q)});
+    if(!r.ok)throw new Error(`OSM veri servisi HTTP ${r.status}`);
+    return r.json();
+  }
+  async function syncPosition(position){
+    if(!state.enabled||!position||!Number.isFinite(Number(position.lat))||!Number.isFinite(Number(position.lon)))return null;
+    const lat=Number(position.lat),lon=Number(position.lon);state.position={lat,lon,updatedAt:now()};
+    try{
+      const data=await overpass(lat,lon),elements=Array.isArray(data.elements)?data.elements:[];
+      const speedLimit=nearestSpeedLimit(elements,lat,lon);
+      const enforcement=elements.map(e=>normalizeEnforcement(e,lat,lon)).filter(Boolean);
+      const signals=elements.map(e=>normalizeSignal(e,lat,lon)).filter(Boolean);
+      window.NEMADataProviders?.ingest({speedLimit,enforcement,signals});
+      state.lastSync=now();state.lastError=null;
+      window.dispatchEvent(new CustomEvent('nema:live-data',{detail:{speedLimit,enforcement,signals,lastSync:state.lastSync,source:'OSM'}}));
+      return {speedLimit,enforcement,signals};
+    }catch(error){state.lastError=String(error?.message||error);window.dispatchEvent(new CustomEvent('nema:live-data-error',{detail:{message:state.lastError,source:'OSM'}}));return null;}
+  }
+  async function syncTraffic(){
+    if(!cfg.trafficUrl)return null;
+    try{
+      const r=await fetchWithTimeout(cfg.trafficUrl,{headers:{Accept:'application/json',...cfg.trafficHeaders}},10000);if(!r.ok)throw new Error(`Trafik sağlayıcısı HTTP ${r.status}`);const data=await r.json();
+      const traffic=data.traffic||data;window.NEMADataProviders?.ingest({traffic});state.trafficLastSync=now();return traffic;
+    }catch(error){state.lastError=String(error?.message||error);return null;}
+  }
+  function configure(options={}){Object.assign(cfg,options);if(typeof options.enabled==='boolean')state.enabled=options.enabled;if(options.trafficUrl!==undefined)state.trafficProvider=options.trafficUrl||null;return status();}
+  function status(){return {...state,config:{...cfg,trafficHeaders:Object.keys(cfg.trafficHeaders||{})}};}
+  function bindUi(){
+    window.addEventListener('nema:speed-limit',e=>{const v=e.detail?.value;if(v!=null){const el=document.getElementById('limit');if(el)el.textContent=v;}});
+    window.addEventListener('nema:enforcement',e=>{const list=(e.detail||[]).filter(x=>x?.verified||x?.source==='OSM').sort((a,b)=>a.distanceM-b.distanceM);const el=document.getElementById('camera');if(el)el.textContent=list.length?`${list[0].type==='speed_camera'?'Hız kamerası':'Denetim'} • ${Math.round(list[0].distanceM)} m`:'Yakında veri yok';});
+    window.addEventListener('nema:traffic',e=>{const t=e.detail,el=document.getElementById('camera');if(t&&el&&!document.querySelector('[data-nema-enforcement-visible]'))el.textContent=t.level&&t.level!=='unknown'?`Trafik: ${t.level}`:'Trafik verisi yok';});
+    window.addEventListener('nema:live-data-error',e=>{const el=document.getElementById('route');if(el)el.textContent=`GPS aktif • canlı harita verisi bekleniyor (${e.detail?.source||'veri'})`;});
+  }
+  let timer=null;
+  function start(){if(timer)clearInterval(timer);const tick=()=>{const p=state.position||window.NEMANavigation?.state?.position;if(p)syncPosition(p);};tick();timer=setInterval(tick,cfg.refreshMs);return true;}
+  function stop(){if(timer)clearInterval(timer);timer=null;return true;}
+  window.NEMALiveData={state,configure,status,parseMaxspeed,syncPosition,syncTraffic,start,stop};
+  if(typeof window!=='undefined'){
+    window.addEventListener('nema:position',e=>{const p=e.detail;if(p?.lat!=null&&p?.lon!=null)state.position={lat:Number(p.lat),lon:Number(p.lon),updatedAt:now()};});
+    if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bindUi();start();},{once:true});else{bindUi();start();}}
+  }
+})();
