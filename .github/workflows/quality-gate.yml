@@ -70,8 +70,35 @@ jobs:
             navigation-vision-engine.js \
             navigation-sharing.js \
             navigation-ev-engine.js \
+            navigation-predictive-engine.js \
+            navigation-spatial-engine.js \
+            navigation-confidence-engine.js \
+            navigation-ai-assistant.js \
+            navigation-test-engine-v2.html \
             navigation-ui-advanced.js \
             navigation-advanced-test.html \
             data/turkey-offline-manifest.json; do
             test -f "$f"
           done
+
+      - name: Run navigation engine smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          const fs=require('fs');
+          const vm=require('vm');
+          const files=['navigation-predictive-engine.js','navigation-spatial-engine.js','navigation-confidence-engine.js','navigation-ai-assistant.js'];
+          const context={window:{},Date,Math,Number,console};
+          vm.createContext(context);
+          for(const f of files) vm.runInContext(fs.readFileSync(f,'utf8'),context,{filename:f});
+          const w=context.window;
+          w.NEMAPredictive.ingestSegments([{id:'a',speedKmh:30,freeFlowKmh:60,lengthM:1000,confidence:90,updatedAt:Date.now()}]);
+          if(w.NEMAPredictive.predictRoute().segments.length!==1) throw new Error('predictive engine failed');
+          w.NEMASpatial.ingest([{id:'x',type:'landmark',lat:39.9,lon:32.8,distanceM:80,name:'Kavşak'}]);
+          if(w.NEMASpatial.guidance({lat:39.9,lon:32.8}).status!=='ready') throw new Error('spatial engine failed');
+          w.NEMAConfidence.set('gps',95); w.NEMAConfidence.set('route',90);
+          if(w.NEMAConfidence.score().score!==93) throw new Error('confidence engine failed');
+          if(w.NEMAAssistant.parse('rota alternatiflerini göster').intent!=='route-options') throw new Error('assistant parser failed');
+          console.log('Navigation engine v2 smoke test OK');
+          NODE
