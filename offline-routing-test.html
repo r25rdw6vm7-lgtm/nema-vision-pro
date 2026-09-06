@@ -4,8 +4,8 @@ const results=[];async function t(name,fn){try{if(!(await fn()))throw Error('FAI
  await t('Offline motor başlangıçta hazır değildir',()=>NEMAOfflineRouting.status().available===false);
  await t('Offline politika motor yokken unavailable',()=>{NEMADriveMapCore.setOfflineCoverage(true);NEMADriveMapCore.setMode('offline');return NEMADriveMapCore.routePolicy()==='unavailable'});
  await t('Geçersiz offline koordinat reddedilir',async()=>{try{await NEMAOfflineRouting.route({from:{lat:91,lon:0},to:{lat:39,lon:32}});return false}catch(e){return true}});
- await t('Native bridge kayıt sözleşmesi çalışır',()=>{NEMANativeBridge.register('test',{route:async()=>({distanceM:1000,durationSec:60,geometry:{type:'LineString',coordinates:[[32,39],[32.01,39.01]]},steps:[]})});return NEMANativeBridge.status().registered===true});
- await t('Kayıtlı offline motor route sağlayabilir',()=>NEMAOfflineRouting.status().available===true);
+ await t('Native bridge kayıt sözleşmesi çalışır',()=>{NEMANativeBridge.register('test',{route:async()=>({distanceM:1000,durationSec:60,geometry:{type:'LineString',coordinates:[[32,39],[32.01,39.01]]},steps:[]})},{offlineRouting:true,offlineMaps:true,licensed:true});return NEMANativeBridge.status().registered===true&&NEMANativeBridge.status().offlineReady===true});
+ await t('Lisanslı offline motor route sağlayabilir',()=>NEMAOfflineRouting.status().available===true);
  await t('Offline politika gerçek motor + coverage ile offline',()=>NEMADriveMapCore.routePolicy()==='offline');
  await t('Offline rota sonucu offline olarak işaretlenir',async()=>{const r=await NEMAOfflineRouting.route({from:{lat:39,lon:32},to:{lat:39.01,lon:32.01}});return r.offline===true});
  document.getElementById('out').textContent=results.join('\n')+'\n\n'+results.filter(x=>x.startsWith('PASS')).length+'/'+results.length+' test başarılı.';
