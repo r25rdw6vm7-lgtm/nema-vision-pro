@@ -1,7 +1,6 @@
 <!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEMA Drive Test</title><body style="font-family:system-ui;background:#0b1220;color:#fff;padding:20px"><h1>NEMA Drive Test Engine</h1><pre id="out">Testler çalışıyor…</pre><script src="navigation-core.js"></script><script src="map-provider.js"></script><script src="route-provider.js"></script><script src="traffic-lights.js"></script><script src="navigation-data-providers.js"></script><script src="navigation-intelligence.js"></script><script src="nema-drive-enhancements.js"></script><script>
 const out=document.getElementById('out'),results=[];function t(name,fn){try{if(!fn())throw Error('FAIL');results.push('PASS  '+name)}catch(e){results.push('FAIL  '+name+' • '+e.message)}}
 t('Green Wave yasal limit ile sınırlandırılır',()=>{const r=NEMATrafficLights.optimize([{distanceM:500,phase:'red',remainingSec:12,greenDurationSec:30,speedLimitKmh:50}],30,50);return r.speedWindowKmh&&r.speedWindowKmh[1]<=50});
-t('Green Wave hız artırmayı teşvik etmez',()=>NEMATrafficLights.recommend(500,80,50,{distanceM:500,phase:'red',remainingSec:12,greenDurationSec:30,speedLimitKmh:50}).message.includes('hız artırma')||true);
 t('Rota sapması hesaplanır',()=>{const g={type:'LineString',coordinates:[[32.85,39.92],[32.851,39.921]]};return NEMADriveEnhancements.routeDistanceM({lat:39.92,lon:32.8505},g)<100});
 t('Rota dışı eşiği çalışır',()=>{const g={type:'LineString',coordinates:[[32.85,39.92],[32.851,39.921]]};return NEMADriveEnhancements.checkOffRoute({lat:39.93,lon:32.86},g,65).offRoute});
 t('Türkçe ses komutu üretilir',()=>NEMADriveEnhancements.instructionForStep({name:'Atatürk Caddesi',maneuver:{type:'turn',modifier:'right'}},350)==='350 metre sonra sağa dönün');
@@ -10,7 +9,7 @@ t('Hız limiti normalizasyonu',()=>NEMADataProviders.normalizeSpeedLimit({speedL
 t('EDS verisi normalize edilir',()=>NEMADataProviders.normalizeEnforcement({type:'eds',distanceM:720,limitKmh:50,source:'DEMO',confidence:'demo'}).distanceM===720);
 t('Trafik verisi normalize edilir',()=>NEMADataProviders.normalizeTraffic({level:'moderate',delaySec:90,speedKmh:38,source:'DEMO'}).delaySec===90);
 t('Demo veri paketi dört katmanı besler',()=>{const r=NEMADataProviders.demo();return r.speedLimit?.value===50&&r.enforcement.length===1&&r.signals.length===3&&r.traffic?.level==='moderate'});
-t('Rota toplam uzunluğu hesaplanır',()=>{const g={type:'LineString',coordinates:[[32.85,39.92],[32.851,39.921],[32.852,39.922]]};const r={geometry:g};return NEMANavigationIntelligence.routeLength(r)>200});
+t('Rota toplam uzunluğu hesaplanır',()=>{const g={type:'LineString',coordinates:[[32.85,39.92],[32.851,39.921],[32.852,39.922]]};return NEMANavigationIntelligence.routeLength({geometry:g})>200});
 t('Rota ilerleme yüzdesi hesaplanır',()=>{const g={type:'LineString',coordinates:[[32.85,39.92],[32.851,39.921]]};const q=NEMANavigationIntelligence.nearestProgress({lat:39.9205,lon:32.8505},{geometry:g});return q.alongM>0&&q.alongM<q.totalM});
 t('Veri tazelik kontrolü çalışır',()=>NEMANavigationIntelligence.dataHealth({updatedAt:Date.now()},120000).status==='fresh');
 t('Sürüş güvenliği hız limitini aşmayı işaretler',()=>NEMANavigationIntelligence.drivingSafety(92,90).status==='near-limit');
@@ -21,6 +20,7 @@ t('Rota kalite motoru kullanılabilir rotayı kabul eder',()=>NEMARouteProvider.
 t('Navigasyon hız önerisi yasal limitin altında kalır',()=>NEMANavigation.recommendedLegalSpeed(50,3)===47);
 t('Doğrulanmış en yakın denetim seçilir',()=>{NEMANavigation.setEnforcement([{type:'eds',distanceM:800,verified:false},{type:'eds',distanceM:1200,verified:true}]);return NEMANavigation.nearestEnforcement(5000,{verifiedOnly:true})?.distanceM===1200});
 t('Rota sağlık durumu geometriyi kontrol eder',()=>{NEMANavigation.setRoute({distanceM:1000,durationSec:80,geometry:{type:'LineString',coordinates:[[32.85,39.92],[32.86,39.93]]},provider:'TEST',confidence:'provider'});return NEMANavigation.routeHealth().status==='ready'});
+t('Canlı rota özeti ETA üretir',()=>{const s=NEMANavigation.routeSummary(50);return s&&s.distanceM===1000&&s.liveEtaSec===72});
 t('Veri sağlık motoru taze veriyi kabul eder',()=>NEMANavigation.dataHealth(120000).status==='fresh');
 out.textContent=results.join('\n')+'\n\n'+results.filter(x=>x.startsWith('PASS')).length+'/'+results.length+' test başarılı.\n\nNot: Bu tarayıcı testleri canlı trafik, EDS veya gerçek araç Bluetooth bağlantısını doğrulamaz. Üretim iOS doğrulaması ayrıca gerçek cihaz ve HERE/Mapbox SDK ile yapılmalıdır.';
 </script></body></html>
