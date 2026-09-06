@@ -1,17 +1,19 @@
-/* NEMA Drive Navigation - Navigation Core v3
- * Provider-agnostic route, telemetry, safety and navigation-state orchestration.
+/* NEMA Drive Navigation - Navigation Core v4
+ * Provider-agnostic route, telemetry, destination and safety state orchestration.
  * External providers must supply verified data. No enforcement evasion logic.
  */
 (function(){'use strict';
- const state={route:null,speedLimit:null,enforcement:[],traffic:null,position:null,lastUpdate:0};
+ const state={route:null,destination:null,speedLimit:null,enforcement:[],traffic:null,position:null,lastUpdate:0};
  const n=(v,d=null)=>Number.isFinite(Number(v))?Number(v):d;
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const now=()=>Date.now();
  function normalizeSpeedLimit(x){if(x==null)return null;const v=n(x.value??x.speedLimitKmh??x.limit);if(v==null||v<5||v>160)return null;return {value:Math.round(v),unit:'km/h',source:x.source||'unknown',confidence:x.confidence||'unknown',temporary:!!x.temporary,updatedAt:x.updatedAt||now(),expiresAt:x.expiresAt||null};}
  function setSpeedLimit(x){state.speedLimit=normalizeSpeedLimit(x);emit('nema:speed-limit',state.speedLimit);return state.speedLimit;}
+ function normalizePoint(p){if(!p||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon)))return null;const lat=Number(p.lat),lon=Number(p.lon);if(lat<-90||lat>90||lon<-180||lon>180)return null;return {lat,lon,label:p.label||p.name||null,source:p.source||'unknown',updatedAt:p.updatedAt||now()};}
+ function setDestination(p){state.destination=normalizePoint(p);emit('nema:destination',state.destination);return state.destination;}
  function setRoute(r){if(!r)return null;state.route={distanceM:Math.max(0,n(r.distanceM,0)),durationSec:Math.max(0,n(r.durationSec,0)),geometry:r.geometry||null,steps:Array.isArray(r.steps)?r.steps:[],provider:r.provider||'unknown',confidence:r.confidence||'unknown',trafficAware:!!r.trafficAware,alternatives:Array.isArray(r.alternatives)?r.alternatives:[],updatedAt:r.updatedAt||now()};emit('nema:route',state.route);return state.route;}
  function setTraffic(t){state.traffic=t?{level:t.level||'unknown',delaySec:n(t.delaySec,0),speedKmh:n(t.speedKmh),source:t.source||'unknown',confidence:t.confidence||'unknown',updatedAt:t.updatedAt||now()}:null;emit('nema:traffic',state.traffic);return state.traffic;}
- function setPosition(p){if(!p||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon)))return null;state.position={lat:Number(p.lat),lon:Number(p.lon),speedKmh:n(p.speedKmh),heading:n(p.heading),accuracyM:n(p.accuracyM),timestamp:p.timestamp||now()};state.lastUpdate=now();emit('nema:position',state.position);return state.position;}
+ function setPosition(p){if(!p||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon)))return null;state.position={lat:Number(p.lat),lon:Number(p.lon),speedKmh:n(p.speedKmh),heading:n(p.heading),accuracyM:n(p.accuracyM),timestamp:p.timestamp||now(),updatedAt:p.updatedAt||now()};state.lastUpdate=now();emit('nema:position',state.position);return state.position;}
  function setEnforcement(list){state.enforcement=(list||[]).filter(Boolean).map(x=>({type:x.type||'unknown',distanceM:n(x.distanceM,0),direction:x.direction||null,limitKmh:n(x.limitKmh),source:x.source||'unknown',confidence:x.confidence||'unknown',verified:!!x.verified,updatedAt:x.updatedAt||now(),expiresAt:x.expiresAt||null})).filter(x=>x.distanceM>=0);emit('nema:enforcement',state.enforcement);return state.enforcement;}
  function drivingStatus(speedKmh,limitKmh){const s=n(speedKmh),l=n(limitKmh);if(s==null||l==null)return {status:'unknown',deltaKmh:null,message:'Hız veya hız limiti doğrulanıyor.'};const d=Math.round(s-l);return d>2?{status:'over-limit',deltaKmh:d,message:`Hız limiti ${d} km/h aşılmış.`}:d>0?{status:'near-limit',deltaKmh:d,message:'Hız limiti sınırındasınız.'}:{status:'within-limit',deltaKmh:d,message:'Hızınız yasal limit içinde.'};}
  function nearestEnforcement(maxDistanceM=5000,opts={}){const t=now();return state.enforcement.filter(x=>x.distanceM<=maxDistanceM&&(!opts.verifiedOnly||x.verified)&&(!x.expiresAt||x.expiresAt>t)&&(!opts.type||x.type===opts.type)).sort((a,b)=>a.distanceM-b.distanceM)[0]||null;}
@@ -19,7 +21,7 @@
  function recommendedLegalSpeed(limitKmh,bufferKmh=3){const l=n(limitKmh);return l==null?null:clamp(Math.round(l-bufferKmh),5,l);}
  function routeHealth(){if(!state.route)return {status:'missing',message:'Rota yok.'};const age=Math.max(0,now()-state.route.updatedAt),validGeometry=!!state.route.geometry?.coordinates?.length,hasSteps=state.route.steps.length>0;return {status:validGeometry&&state.route.distanceM>0&&state.route.durationSec>0?'ready':'incomplete',ageMs:age,trafficAware:state.route.trafficAware,provider:state.route.provider,confidence:state.route.confidence,hasSteps};}
  function dataHealth(maxAgeMs=120000){const items=[['speedLimit',state.speedLimit],['traffic',state.traffic],['position',state.position]];const stale=items.filter(([,v])=>v&&now()-(v.updatedAt||v.timestamp||0)>maxAgeMs).map(([k])=>k);return {status:stale.length?'stale':'fresh',stale};}
- function routeSummary(speedKmh=state.position?.speedKmh){const r=state.route;if(!r)return null;const etaSec=eta(r.distanceM,speedKmh);return {distanceM:r.distanceM,durationSec:r.durationSec,liveEtaSec:etaSec,trafficAware:r.trafficAware,provider:r.provider,confidence:r.confidence,alternatives:r.alternatives.length};}
+ function routeSummary(speedKmh=state.position?.speedKmh){const r=state.route;if(!r)return null;const etaSec=eta(r.distanceM,speedKmh);return {distanceM:r.distanceM,durationSec:r.durationSec,liveEtaSec:etaSec,trafficAware:r.trafficAware,provider:r.provider,confidence:r.confidence,alternatives:r.alternatives.length,destination:state.destination};}
  function emit(name,detail){if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent(name,{detail}));}
- window.NEMANavigation={state,setSpeedLimit,normalizeSpeedLimit,setRoute,setTraffic,setPosition,setEnforcement,drivingStatus,nearestEnforcement,eta,recommendedLegalSpeed,routeHealth,dataHealth,routeSummary};
+ window.NEMANavigation={state,setSpeedLimit,normalizeSpeedLimit,setDestination,normalizePoint,setRoute,setTraffic,setPosition,setEnforcement,drivingStatus,nearestEnforcement,eta,recommendedLegalSpeed,routeHealth,dataHealth,routeSummary};
 })();
