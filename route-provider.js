@@ -6,7 +6,7 @@
  const finite=v=>Number.isFinite(Number(v));
  const validPoint=p=>p&&finite(p.lat)&&finite(p.lon)&&Math.abs(Number(p.lat))<=90&&Math.abs(Number(p.lon))<=180;
  const normalize=(x,name)=>({distanceM:Math.max(0,Number(x.distanceM)||0),durationSec:Math.max(0,Number(x.durationSec)||0),geometry:x.geometry||null,steps:Array.isArray(x.steps)?x.steps:[],provider:x.provider||name,confidence:x.confidence||'provider',trafficAware:!!x.trafficAware,alternatives:Array.isArray(x.alternatives)?x.alternatives:[],updatedAt:x.updatedAt||Date.now()});
- const routeQuality=r=>({usable:!!(r?.geometry?.coordinates?.length)&&r.distanceM>0&&r.durationSec>0,hasSteps:!!r?.steps?.length,trafficAware:!!r?.trafficAware,confidence:r?.confidence||'unknown',provider:r?.provider||'unknown'});
+ const routeQuality=r=>({usable:r?.confidence==='exact'||(!!(r?.geometry?.coordinates?.length)&&r.distanceM>0&&r.durationSec>0),hasSteps:!!r?.steps?.length,trafficAware:!!r?.trafficAware,confidence:r?.confidence||'unknown',provider:r?.provider||'unknown'});
  async function fetchWithTimeout(url,options={},timeoutMs=10000){const c=new AbortController();const timer=setTimeout(()=>c.abort(),timeoutMs);try{return await fetch(url,{...options,signal:c.signal});}finally{clearTimeout(timer);}}
  async function osrm({from,to,profile='driving',timeoutMs=10000,alternatives=false}){
   if(!validPoint(from)||!validPoint(to))throw new Error('Geçerli başlangıç ve hedef koordinatları gerekli.');
