@@ -1,0 +1,8 @@
+/* NEMA Drive EV planning engine v1 */
+(function(){'use strict';
+ const state={vehicle:null,lastPlan:null};
+ function configure(vehicle={}){state.vehicle={batteryKWh:Number(vehicle.batteryKWh)||0,chargeKWh:Number(vehicle.chargeKWh)||0,consumptionKWh100:Number(vehicle.consumptionKWh100)||18,minArrivalPct:Number(vehicle.minArrivalPct??15)};return state.vehicle;}
+ function estimate(distanceM,profile={}){const v=state.vehicle;if(!v?.batteryKWh)return {known:false,reason:'EV batarya kapasitesi yapılandırılmadı'};const distanceKm=Math.max(0,Number(distanceM)||0)/1000;const factor=1+Math.max(-.2,Math.min(.5,Number(profile.elevationFactor||0)+Number(profile.trafficFactor||0)+Number(profile.weatherFactor||0)));const energy=distanceKm*(v.consumptionKWh100/100)*factor;const start=v.chargeKWh||v.batteryKWh;const arrival=Math.max(0,start-energy);const pct=arrival/v.batteryKWh*100;return {known:true,distanceKm,energyKWh:energy,arrivalKWh:arrival,arrivalPct:pct,needsCharge:pct<v.minArrivalPct};}
+ function plan(route,stations=[]){const e=estimate(route?.distanceM||0,route?.profile||{});if(!e.known)return {known:false,reason:e.reason};const compatible=stations.filter(s=>s&&s.available!==false).sort((a,b)=>(a.distanceM||Infinity)-(b.distanceM||Infinity));const stop=e.needsCharge?compatible[0]||null:null;const result={...e,chargingStop:stop};state.lastPlan=result;return result;}
+ window.NEMAEV={state,configure,estimate,plan};
+})();
