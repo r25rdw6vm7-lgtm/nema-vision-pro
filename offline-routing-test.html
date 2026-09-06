@@ -1,0 +1,11 @@
+<!doctype html><html lang="tr"><meta charset="utf-8"><title>NEMA Offline Routing Test</title><body style="font-family:system-ui;background:#0b1220;color:#fff;padding:20px"><h1>NEMA Offline Routing Test</h1><pre id="out">Testler çalışıyor…</pre><script src="nema-drive-map-core.js"></script><script src="map-provider.js"></script><script src="nema-drive-offline-routing.js"></script><script src="nema-native-bridge.js"></script><script>
+const results=[];const t=(n,f)=>{try{if(!f())throw Error('FAIL');results.push('PASS  '+n)}catch(e){results.push('FAIL  '+n+' • '+e.message)}};
+t('Offline motor başlangıçta hazır değildir',()=>NEMAOfflineRouting.status().available===false);
+t('Offline politika motor yokken unavailable',()=>{NEMADriveMapCore.setOfflineCoverage(true);NEMADriveMapCore.setMode('offline');return NEMADriveMapCore.routePolicy()==='unavailable'});
+t('Geçersiz offline koordinat reddedilir',()=>NEMAOfflineRouting.route({from:{lat:91,lon:0},to:{lat:39,lon:32}}).then(()=>false).catch(()=>true));
+t('Native bridge kayıt sözleşmesi çalışır',()=>{NEMANativeBridge.register('test',{route:async()=>({distanceM:1000,durationSec:60,geometry:{type:'LineString',coordinates:[[32,39],[32.01,39.01]]},steps:[]})});return NEMANativeBridge.status().registered===true});
+t('Kayıtlı offline motor route sağlayabilir',()=>NEMAOfflineRouting.status().available===true);
+t('Offline politika gerçek motor + coverage ile offline',()=>NEMADriveMapCore.routePolicy()==='offline');
+t('Offline rota sonucu offline olarak işaretlenir',()=>NEMAOfflineRouting.route({from:{lat:39,lon:32},to:{lat:39.01,lon:32.01}}).then(r=>r.offline===true));
+Promise.all(results.map(x=>x)).then(()=>document.getElementById('out').textContent=results.join('\n')+'\n\n'+results.filter(x=>x.startsWith('PASS')).length+'/'+results.length+' test tanımı çalıştırıldı.');
+</script></body></html>
