@@ -1,4 +1,4 @@
-/* NEMA Drive Offline Routing v1
+/* NEMA Drive Offline Routing v2
  * Contract for real offline routing engines.
  * This module deliberately returns unavailable until a native/offline engine is registered.
  */
@@ -9,19 +9,14 @@
   const providers={};
   function register(name,adapter){
     if(!name||!adapter||typeof adapter.route!=='function')throw new Error('Geçerli offline rota adaptörü gerekli.');
-    providers[name]=adapter;
-    state.provider=name;
+    providers[name]=adapter;state.provider=name;
     if(window.NEMADriveMapCore?.registerOfflineProvider)window.NEMADriveMapCore.registerOfflineProvider(name,adapter);
     return status();
   }
   async function route(opts={}){
     if(!validPoint(opts.from)||!validPoint(opts.to))throw new Error('Offline rota için geçerli başlangıç ve hedef koordinatları gerekli.');
-    const name=opts.provider||state.provider;
-    const adapter=name&&providers[name];
-    if(!adapter) {
-      state.lastError='Gerçek offline rota motoru bağlı değil.';
-      throw new Error(state.lastError);
-    }
+    const name=opts.provider||state.provider,adapter=name&&providers[name];
+    if(!adapter){state.lastError='Gerçek offline rota motoru bağlı değil.';throw new Error(state.lastError);}
     const result=await adapter.route(opts);
     if(!result||!Number.isFinite(Number(result.distanceM))||!Number.isFinite(Number(result.durationSec)))throw new Error('Offline motor geçersiz rota döndürdü.');
     state.lastError=null;state.lastRouteAt=Date.now();
@@ -29,4 +24,5 @@
   }
   function status(){return {provider:state.provider,providers:Object.keys(providers),available:Object.keys(providers).length>0,lastError:state.lastError,lastRouteAt:state.lastRouteAt};}
   window.NEMAOfflineRouting={state,providers,register,route,status};
+  if(window.NEMANativeBridge?.state?.adapter&&!state.provider){register(`native-${window.NEMANativeBridge.state.platform||'unknown'}`,window.NEMANativeBridge.state.adapter);}
 })();
