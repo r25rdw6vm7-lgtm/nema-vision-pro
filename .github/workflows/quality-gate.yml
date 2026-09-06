@@ -1,0 +1,48 @@
+name: NEMA Drive Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
+
+      - name: Validate Turkey offline manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "const m=require('./data/turkey-offline-manifest.json'); if(m.region!=='TR'||m.policy.neverTreatRawPbfAsRoutable!==true) process.exit(1); console.log('Turkey manifest policy OK')"
+
+      - name: Validate offline safety contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "Gerçek offline rota motoru bağlı değil" nema-drive-offline-routing.js
+          grep -q "offline: false\|offlineReady: false" map-provider.js
+          test "$(find . -type f -name '*.osm.pbf' -not -path './.git/*' | wc -l)" -eq 0
+
+      - name: Validate required offline shell files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f nema-drive-offline-routing.js
+          test -f nema-native-bridge.js
+          test -f offline-routing-test.html
+          test -f data/turkey-offline-manifest.json
