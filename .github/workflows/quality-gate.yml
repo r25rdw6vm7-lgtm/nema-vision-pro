@@ -24,6 +24,21 @@ jobs:
           set -euo pipefail
           find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
 
+      - name: Validate JSON and feature matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          const m=JSON.parse(fs.readFileSync('navigation-feature-matrix.json','utf8'));
+          if(m.schemaVersion!==2 || !Array.isArray(m.features) || m.features.length!==100) process.exit(1);
+          const allowed=new Set(['working','partial','engine_ready','external_blocker','missing']);
+          for(const x of m.features){if(!allowed.has(x.status)||!x.id||!x.category||!x.name) process.exit(1);}
+          const ids=new Set(m.features.map(x=>x.id));
+          if(ids.size!==100) process.exit(1);
+          console.log('Feature matrix OK: 100 rows');
+          NODE
+
       - name: Validate Turkey offline manifest
         shell: bash
         run: |
@@ -46,6 +61,11 @@ jobs:
           test -f nema-native-bridge.js
           test -f nema-here-native-contract.js
           test -f navigation-advanced-engine.js
+          test -f navigation-model-v2.js
+          test -f navigation-poi-engine.js
+          test -f navigation-personalization.js
+          test -f navigation-data-contracts.js
+          test -f navigation-model-test.html
           test -f advanced-navigation-test.html
           test -f offline-routing-test.html
           test -f data/turkey-offline-manifest.json
