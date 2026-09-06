@@ -59,7 +59,8 @@ jobs:
           node - <<'NODE'
           const fs=require('fs'),vm=require('vm');
           const files=['nema-predictive-engine.js','nema-spatial-engine.js','nema-confidence-engine.js','nema-ai-assistant.js','navigation-model-v2.js','traffic-engine.js','navigation-vision-engine.js','nema-drive-map-core.js','nema-drive-offline-routing.js','nema-native-bridge.js','map-provider.js','nema-real-data-gateway.js','nema-platform-orchestrator.js'];
-          const context={window:{},navigator:{onLine:true},Date,Math,Number,console,CustomEvent:function(){}}; vm.createContext(context);
+          const eventTarget={addEventListener(){},dispatchEvent(){}};
+          const context={window:{...eventTarget},navigator:{onLine:true},Date,Math,Number,console,CustomEvent:function(){}}; vm.createContext(context);
           for(const f of files) vm.runInContext(fs.readFileSync(f,'utf8'),context,{filename:f});
           const w=context.window;
           w.NEMAPredictive.ingest({speedKmh:30,delaySec:40,confidence:90,timestamp:Date.now()});
