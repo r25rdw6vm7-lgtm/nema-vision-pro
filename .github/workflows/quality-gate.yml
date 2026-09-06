@@ -45,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "Gerçek offline rota motoru bağlı değil" nema-drive-offline-routing.js
-          grep -q "offline: false\|offlineReady: false" map-provider.js
+          grep -q "offlineReady:false" map-provider.js
           test "$(find . -type f -name '*.osm.pbf' -not -path './.git/*' | wc -l)" -eq 0
       - name: Validate required navigation files
         shell: bash
