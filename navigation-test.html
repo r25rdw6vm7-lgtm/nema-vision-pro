@@ -19,6 +19,7 @@ t('Reroute cooldown güvenlik kilidi',()=>{const s=NEMANavigationIntelligence.st
 t('Koordinat doğrulama geçersiz veriyi reddeder',()=>NEMARouteProvider.validPoint({lat:91,lon:32})===false&&NEMARouteProvider.validPoint({lat:39.92,lon:32.85})===true);
 t('Rota kalite motoru eksik geometriyi işaretler',()=>NEMARouteProvider.routeQuality({distanceM:1200,durationSec:90,geometry:null,steps:[]}).usable===false);
 t('Rota kalite motoru kullanılabilir rotayı kabul eder',()=>NEMARouteProvider.routeQuality({distanceM:1200,durationSec:90,geometry:{type:'LineString',coordinates:[[32.85,39.92],[32.86,39.93]]},steps:[{}],trafficAware:true,confidence:'provider'}).usable===true);
+t('Rota sağlayıcı fallback yapılandırması çalışır',()=>{const s=NEMARouteProvider.configure({primary:'osrm',fallbacks:['osrm']});return s.primary==='osrm'&&s.fallbacks[0]==='osrm'});
 t('Navigasyon hız önerisi yasal limitin altında kalır',()=>NEMANavigation.recommendedLegalSpeed(50,3)===47);
 t('Veri güven skoru OSM için sınırlıdır',()=>{const x=NEMANavigation.normalizeSpeedLimit({value:90,source:'OSM',confidence:'map',updatedAt:Date.now()});return x?.confidenceScore===72});
 t('Veri sağlık motoru güven skorunu üretir',()=>{NEMANavigation.setSpeedLimit({value:90,source:'OSM',confidence:'map'});const h=NEMANavigation.dataHealth();return h.confidenceScore>=70});
