@@ -1,6 +1,6 @@
-const CACHE='nema-drive-shell-v5';
+const CACHE='nema-drive-shell-v6';
 const SHELL=[
-  './','./index.html','./traffic-lights.js','./vehicle-protocol.js','./navigation-core.js','./route-provider.js','./nema-drive-offline-routing.js','./nema-native-bridge.js','./nema-here-native-contract.js',
+  './','./index.html','./traffic-lights.js','./vehicle-protocol.js','./navigation-core.js','./route-provider.js','./navigation-advanced-engine.js','./nema-drive-offline-routing.js','./nema-native-bridge.js','./nema-here-native-contract.js',
   './map-provider.js','./nema-drive-map-core.js','./nema-drive-data-config.js','./nema-drive-offline-cache.js',
   './speed-limit-engine.js','./enforcement-engine.js','./traffic-engine.js','./navigation-intelligence.js',
   './navigation-runtime-bridge.js','./navigation-ui-runtime.js','./navigation-voice.js','./navigation-live-data.js'
