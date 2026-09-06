@@ -1,4 +1,4 @@
-/* NEMA Drive Navigation - Navigation Core v7
+/* NEMA Drive Navigation - Navigation Core v8
  * Single source of truth for route, telemetry, destination, safety, confidence, average-speed state and GPS smoothing.
  * External providers must supply verified data. No enforcement evasion logic.
  */
@@ -14,7 +14,26 @@
  function setDestination(p){state.destination=normalizePoint(p);emit('nema:destination',state.destination);return state.destination;}
  function setRoute(r){if(!r)return null;state.route={distanceM:Math.max(0,n(r.distanceM,0)),durationSec:Math.max(0,n(r.durationSec,0)),geometry:r.geometry||null,steps:Array.isArray(r.steps)?r.steps:[],provider:r.provider||'unknown',confidence:r.confidence||'unknown',confidenceScore:confidenceScore(r.confidence,r.provider),trafficAware:!!r.trafficAware,alternatives:Array.isArray(r.alternatives)?r.alternatives:[],updatedAt:r.updatedAt||now()};emit('nema:route',state.route);return state.route;}
  function setTraffic(t){state.traffic=t?{level:t.level||'unknown',delaySec:n(t.delaySec,0),speedKmh:n(t.speedKmh),source:t.source||'unknown',confidence:t.confidence||'unknown',confidenceScore:confidenceScore(t.confidence,t.source,now()-(t.updatedAt||now())),updatedAt:t.updatedAt||now()}:null;emit('nema:traffic',state.traffic);return state.traffic;}
- function smoothSpeed(raw,position){const s=n(raw);if(s==null)return null;const previous=n(state.position?.speedKmh);const accuracy=n(position?.accuracyM,30);if(previous==null||!Number.isFinite(previous))return clamp(s,0,250);if(accuracy>60)return Math.round((previous*0.85+s*0.15)*10)/10;const alpha=accuracy<=10?.45:accuracy<=25?.32:.22;const filtered=previous+(s-previous)*alpha;return Math.round(clamp(filtered,0,250)*10)/10;}
+ function smoothSpeed(raw,position){
+  const s=n(raw); if(s==null)return null;
+  const accuracy=n(position?.accuracyM,30);
+  const previous=n(state.position?.speedKmh);
+  const previousTimestamp=n(state.position?.timestamp);
+  const timestamp=n(position?.timestamp,now());
+  if(s<0||s>220)return previous??0;
+  if(previous==null||!Number.isFinite(previous)){
+   if(accuracy>45&&s>35)return 0;
+   return Math.round(clamp(s,0,180)*10)/10;
+  }
+  const dt=previousTimestamp!=null?clamp((timestamp-previousTimestamp)/1000,.2,10):1;
+  const maxUp=(accuracy>45?8:14.4)*dt;
+  const maxDown=(accuracy>45?14.4:28.8)*dt;
+  const bounded=clamp(s,previous-maxDown,previous+maxUp);
+  let alpha=accuracy<=10?.38:accuracy<=25?.28:accuracy<=45?.18:.10;
+  if(accuracy>60)alpha=.06;
+  const filtered=previous+(bounded-previous)*alpha;
+  return Math.round(clamp(filtered,0,180)*10)/10;
+ }
  function setPosition(p){if(!p||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon)))return null;const rawSpeed=n(p.speedKmh),smoothed=smoothSpeed(rawSpeed,p);state.position={lat:Number(p.lat),lon:Number(p.lon),speedKmh:smoothed,rawSpeedKmh:rawSpeed,heading:n(p.heading),accuracyM:n(p.accuracyM),timestamp:p.timestamp||now(),updatedAt:p.updatedAt||now()};state.lastUpdate=now();emit('nema:position',state.position);return state.position;}
  function setEnforcement(list){state.enforcement=(list||[]).filter(Boolean).map(x=>{const updatedAt=x.updatedAt||now();return {id:x.id||null,type:x.type||'unknown',distanceM:n(x.distanceM,0),direction:x.direction||null,limitKmh:n(x.limitKmh),source:x.source||'unknown',confidence:x.confidence||'unknown',confidenceScore:confidenceScore(x.confidence,x.source,now()-updatedAt),verified:!!x.verified,updatedAt,expiresAt:x.expiresAt||null,startPoint:x.startPoint||null,endPoint:x.endPoint||null,lengthM:n(x.lengthM)};}).filter(x=>x.distanceM>=0);emit('nema:enforcement',state.enforcement);return state.enforcement;}
  function drivingStatus(speedKmh,limitKmh){const s=n(speedKmh),l=n(limitKmh);if(s==null||l==null)return {status:'unknown',deltaKmh:null,message:'Hız veya hız limiti doğrulanıyor.'};const d=Math.round(s-l);return d>2?{status:'over-limit',deltaKmh:d,message:`Hız limiti ${d} km/h aşılmış.`}:d>0?{status:'near-limit',deltaKmh:d,message:'Hız limiti sınırındasınız.'}:{status:'within-limit',deltaKmh:d,message:'Hızınız yasal limit içinde.'};}
