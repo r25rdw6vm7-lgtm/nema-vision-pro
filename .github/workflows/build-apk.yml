@@ -17,6 +17,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Package Vercel web source ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -r NEMA-Vision-Pro-v62-Vercel-Web.zip . -x '.git/*' 'NEMA-Vision-Pro-v62-Vercel-Web.zip'
+
+      - name: Upload Vercel web source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEMA-Vision-Pro-v62-Vercel-Web
+          path: NEMA-Vision-Pro-v62-Vercel-Web.zip
+          if-no-files-found: error
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
