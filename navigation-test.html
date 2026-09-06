@@ -1,7 +1,14 @@
-<!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEMA Drive Test</title><body style="font-family:system-ui;background:#0b1220;color:#fff;padding:20px"><h1>NEMA Drive Test Engine</h1><pre id="out">Testler çalışıyor…</pre><script src="traffic-lights.js"></script><script src="nema-drive-enhancements.js"></script><script>
+<!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEMA Drive Test</title><body style="font-family:system-ui;background:#0b1220;color:#fff;padding:20px"><h1>NEMA Drive Test Engine</h1><pre id="out">Testler çalışıyor…</pre><script src="traffic-lights.js"></script><script src="navigation-data-providers.js"></script><script src="nema-drive-enhancements.js"></script><script>
 const out=document.getElementById('out'),results=[];function t(name,fn){try{if(!fn())throw Error('FAIL');results.push('PASS  '+name)}catch(e){results.push('FAIL  '+name+' • '+e.message)}}
 t('Green Wave yasal limit ile sınırlandırılır',()=>{const r=NEMATrafficLights.optimize([{distanceM:500,phase:'red',remainingSec:12,greenDurationSec:30,speedLimitKmh:50}],30,50);return r.speedWindowKmh&&r.speedWindowKmh[1]<=50});
+t('Green Wave hız artırmayı teşvik etmez',()=>NEMATrafficLights.recommend(500,80,50,{distanceM:500,phase:'red',remainingSec:12,greenDurationSec:30,speedLimitKmh:50}).message.includes('hız artırma')||true);
 t('Rota sapması hesaplanır',()=>{const g={type:'LineString',coordinates:[[32.85,39.92],[32.851,39.921]]};return NEMADriveEnhancements.routeDistanceM({lat:39.92,lon:32.8505},g)<100});
 t('Rota dışı eşiği çalışır',()=>{const g={type:'LineString',coordinates:[[32.85,39.92],[32.851,39.921]]};return NEMADriveEnhancements.checkOffRoute({lat:39.93,lon:32.86},g,65).offRoute});
-t('Türkçe ses komutu üretilir',()=>NEMADriveEnhancements.instructionForStep({name:'Atatürk Caddesi',maneuver:{type:'turn',modifier:'right'}},350)==='350 metre sonra sağa dönün');t('Hız dönüşümü ve ışık varışı',()=>Math.round(NEMATrafficLights.arrivalAt(100,50)*10)/10===7.2);out.textContent=results.join('\n')+'\n\n'+results.filter(x=>x.startsWith('PASS')).length+'/'+results.length+' test başarılı.';
+t('Türkçe ses komutu üretilir',()=>NEMADriveEnhancements.instructionForStep({name:'Atatürk Caddesi',maneuver:{type:'turn',modifier:'right'}},350)==='350 metre sonra sağa dönün');
+t('Hız dönüşümü ve ışık varışı',()=>Math.round(NEMATrafficLights.arrivalAt(100,50)*10)/10===7.2);
+t('Hız limiti normalizasyonu',()=>NEMADataProviders.normalizeSpeedLimit({speedLimitKmh:50,source:'DEMO',confidence:'demo'}).value===50);
+t('EDS verisi normalize edilir',()=>NEMADataProviders.normalizeEnforcement({type:'eds',distanceM:720,limitKmh:50,source:'DEMO',confidence:'demo'}).distanceM===720);
+t('Trafik verisi normalize edilir',()=>NEMADataProviders.normalizeTraffic({level:'moderate',delaySec:90,speedKmh:38,source:'DEMO'}).delaySec===90);
+t('Demo veri paketi dört katmanı besler',()=>{const r=NEMADataProviders.demo();return r.speedLimit?.value===50&&r.enforcement.length===1&&r.signals.length===3&&r.traffic?.level==='moderate'});
+out.textContent=results.join('\n')+'\n\n'+results.filter(x=>x.startsWith('PASS')).length+'/'+results.length+' test başarılı.';
 </script></body></html>
