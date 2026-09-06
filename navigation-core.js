@@ -1,9 +1,10 @@
-/* NEMA Drive Navigation - Navigation Core v8
+/* NEMA Drive Navigation - Navigation Core v9
  * Single source of truth for route, telemetry, destination, safety, confidence, average-speed state and GPS smoothing.
  * External providers must supply verified data. No enforcement evasion logic.
  */
 (function(){'use strict';
  const state={route:null,destination:null,speedLimit:null,enforcement:[],traffic:null,position:null,averageSpeed:null,lastUpdate:0};
+ let speedCandidate=null;
  const n=(v,d=null)=>Number.isFinite(Number(v))?Number(v):d;
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const now=()=>Date.now();
@@ -22,9 +23,16 @@
   const timestamp=n(position?.timestamp,now());
   if(s<0||s>220)return previous??0;
   if(previous==null||!Number.isFinite(previous)){
-   if(accuracy>45&&s>35)return 0;
+   if(s<=3){speedCandidate=null;return 0;}
+   if(speedCandidate==null){speedCandidate={speed:s,timestamp};return 0;}
+   const elapsed=Math.abs(timestamp-speedCandidate.timestamp);
+   const consistent=Math.abs(s-speedCandidate.speed)<=Math.max(12,speedCandidate.speed*.35);
+   speedCandidate={speed:s,timestamp};
+   if(elapsed<250||!consistent)return 0;
+   if(accuracy>55&&s>45)return 0;
    return Math.round(clamp(s,0,180)*10)/10;
   }
+  speedCandidate=null;
   const dt=previousTimestamp!=null?clamp((timestamp-previousTimestamp)/1000,.2,10):1;
   const maxUp=(accuracy>45?8:14.4)*dt;
   const maxDown=(accuracy>45?14.4:28.8)*dt;
