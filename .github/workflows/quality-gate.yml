@@ -31,12 +31,12 @@ jobs:
           node - <<'NODE'
           const fs=require('fs');
           const m=JSON.parse(fs.readFileSync('navigation-feature-matrix.json','utf8'));
-          if(m.schemaVersion!==2 || !Array.isArray(m.features) || m.features.length!==100) process.exit(1);
+          if(m.schemaVersion!==3 || !Array.isArray(m.features) || m.features.length!==100) process.exit(1);
           const allowed=new Set(['working','partial','engine_ready','external_blocker','missing']);
           for(const x of m.features){if(!allowed.has(x.status)||!x.id||!x.category||!x.name) process.exit(1);}
           const ids=new Set(m.features.map(x=>x.id));
           if(ids.size!==100) process.exit(1);
-          console.log('Feature matrix OK: 100 rows');
+          console.log('Feature matrix OK: 100 rows, schema v3');
           NODE
 
       - name: Validate Turkey offline manifest
@@ -57,15 +57,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f nema-drive-offline-routing.js
-          test -f nema-native-bridge.js
-          test -f nema-here-native-contract.js
-          test -f navigation-advanced-engine.js
-          test -f navigation-model-v2.js
-          test -f navigation-poi-engine.js
-          test -f navigation-personalization.js
-          test -f navigation-data-contracts.js
-          test -f navigation-model-test.html
-          test -f advanced-navigation-test.html
-          test -f offline-routing-test.html
-          test -f data/turkey-offline-manifest.json
+          for f in \
+            nema-drive-offline-routing.js \
+            nema-native-bridge.js \
+            nema-here-native-contract.js \
+            navigation-advanced-engine.js \
+            navigation-model-v2.js \
+            navigation-poi-engine.js \
+            navigation-personalization.js \
+            navigation-data-contracts.js \
+            navigation-incident-ui.js \
+            navigation-vision-engine.js \
+            navigation-sharing.js \
+            navigation-ev-engine.js \
+            navigation-ui-advanced.js \
+            navigation-advanced-test.html \
+            data/turkey-offline-manifest.json; do
+            test -f "$f"
+          done
