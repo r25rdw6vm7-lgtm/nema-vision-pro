@@ -1,16 +1,10 @@
-/* NEMA Drive Map Core v1
+/* NEMA Drive Map Core v2
  * Hybrid map-data policy and lightweight web map matching.
  * This layer never invents offline coverage or traffic data.
  */
 (function(){
   'use strict';
-  const state={
-    mode:'hybrid',
-    online:navigator.onLine!==false,
-    offlineCoverage:false,
-    lastMatch:null,
-    updatedAt:Date.now()
-  };
+  const state={mode:'hybrid',online:navigator.onLine!==false,offlineCoverage:false,lastMatch:null,updatedAt:Date.now()};
   const offlineProviders={};
   const n=v=>Number(v);
   const validPoint=p=>p&&Number.isFinite(n(p.lat))&&Number.isFinite(n(p.lon))&&Math.abs(n(p.lat))<=90&&Math.abs(n(p.lon))<=180;
@@ -37,8 +31,7 @@
   }
   function mapMatch(position,geometry){
     if(!validPoint(position)||!geometry?.coordinates?.length)return null;
-    const coords=geometry.coordinates;
-    let best=null;
+    const coords=geometry.coordinates;let best=null;
     for(let i=1;i<coords.length;i++){
       const a={lon:coords[i-1][0],lat:coords[i-1][1]},b={lon:coords[i][0],lat:coords[i][1]};
       const projected=projectPoint(position,a,b);if(!projected)continue;
@@ -46,7 +39,6 @@
       if(!best||distanceM<best.distanceM)best={point:projected,distanceM,segmentIndex:i-1,bearing:bearing(a,b)};
     }
     if(!best)return null;
-    const accuracy=n(position.accuracyM);
     const confidence=best.distanceM<=15?'high':best.distanceM<=40?'good':best.distanceM<=80?'medium':'low';
     state.lastMatch={...best,confidence,updatedAt:Date.now()};
     return state.lastMatch;
