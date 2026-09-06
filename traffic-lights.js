@@ -1,5 +1,5 @@
-/* NEMA Drive Navigation - Traffic Intelligence Core v7
- * Multi-signal lawful Green Wave + vehicle/Bluetooth bridge + runtime intelligence loader.
+/* NEMA Drive Navigation - Traffic Intelligence Core v8
+ * Multi-signal lawful Green Wave + vehicle/Bluetooth bridge + runtime intelligence/data loaders.
  * Never recommends exceeding an applicable legal speed limit.
  */
 (function(){
@@ -23,5 +23,5 @@
   async function connectBluetooth(){if(!bluetoothSupported())throw new Error('Web Bluetooth bu tarayıcıda kullanılamıyor. iOS üretim uygulamasında CoreBluetooth/native bridge gerekir.');const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true});const server=await device.gatt.connect();state.bluetoothDevice=device;state.bluetoothServer=server;device.addEventListener('gattserverdisconnected',()=>{state.bluetoothDevice=null;state.bluetoothServer=null;if(typeof window!=='undefined')window.dispatchEvent(new Event('nema:bluetooth-disconnected'));});return {name:device.name||'Bluetooth cihazı',connected:true};}
   async function disconnectBluetooth(){if(state.bluetoothDevice?.gatt?.connected)state.bluetoothDevice.gatt.disconnect();state.bluetoothDevice=null;state.bluetoothServer=null;if(typeof window!=='undefined')window.dispatchEvent(new Event('nema:bluetooth-disconnected'));return {connected:false};}
   window.NEMATrafficLights={state,addSignal,setSignals,clear,arrivalAt,greenWindow,recommend,next,optimize};window.NEMAGreenWave=window.NEMATrafficLights;window.NEMAVehicle={state,ingestVehicle,bluetoothSupported,connectBluetooth,disconnectBluetooth};
-  if(typeof document!=='undefined'){const load=(src,flag)=>{if(window[flag]||document.querySelector(`script[data-${flag}]`))return;const s=document.createElement('script');s.src=src;s.async=true;s.dataset[flag]='1';document.head.appendChild(s);};const boot=()=>{load('navigation-data-providers.js','nemaDataProviders');load('navigation-intelligence.js','nemaNavigationIntelligence');load('map-provider.js','nemaMapProvider');load('navigation-voice.js','nemaNavigationVoice');load('navigation-runtime-bridge.js','nemaNavigationRuntime');};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();}
+  if(typeof document!=='undefined'){const load=(src,flag)=>{if(window[flag]||document.querySelector(`script[data-${flag}]`))return;const s=document.createElement('script');s.src=src;s.async=true;s.dataset[flag]='1';document.head.appendChild(s);};const boot=()=>{load('navigation-data-providers.js','nemaDataProviders');load('navigation-intelligence.js','nemaNavigationIntelligence');load('map-provider.js','nemaMapProvider');load('navigation-voice.js','nemaNavigationVoice');load('navigation-runtime-bridge.js','nemaNavigationRuntime');load('navigation-live-data.js','nemaLiveData');};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();}
 })();
