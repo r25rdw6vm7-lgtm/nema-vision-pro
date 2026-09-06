@@ -1,0 +1,33 @@
+{
+  "name": "agro-met-command-center",
+  "version": "3.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "export:web": "expo export --platform web",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor",
+    "core:selftest": "tsx -e \"import { runCoreSelfTest } from './core/self-test.ts'; const r = await runCoreSelfTest(); console.log(r.checks.join('\\n')); if (r.failed) process.exit(1);\""
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.0",
+    "expo": "~54.0.0",
+    "expo-router": "~6.0.0",
+    "expo-status-bar": "~3.0.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.4",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-web": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "tsx": "^4.20.5",
+    "typescript": "~5.9.2"
+  }
+}
