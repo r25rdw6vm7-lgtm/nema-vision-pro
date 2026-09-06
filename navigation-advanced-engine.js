@@ -1,4 +1,4 @@
-/* NEMA Drive Advanced Navigation Engine v2
+/* NEMA Drive Advanced Navigation Engine v3
  * Route preferences, alternatives, waypoints, incidents, community reports,
  * lane guidance, landmark guidance and energy-aware planning contracts.
  * No fabricated live data: providers must ingest real/verified data.
@@ -18,7 +18,7 @@
  function activeIncidents(maxAgeMs=180000){const t=now();return state.incidents.filter(x=>(!x.expiresAt||x.expiresAt>t)&&t-(x.updatedAt||x.createdAt)<=maxAgeMs);}
  function reportIncident(x){const incident=normalizeIncident({...x,source:x.source||'community',verified:false,createdAt:now(),updatedAt:now()});if(!incident)return null;state.reports.push({...incident,reportCount:1});emit('nema:incident-report',incident);return incident;}
  function confirmIncident(id,confirmed=true){const report=state.reports.find(x=>x.id===id);if(!report)return null;report.confirmed=!!confirmed;report.confirmedAt=now();return report;}
- function laneGuidance(lanes=[],currentIndex=null){const list=(Array.isArray(lanes)?lanes:[]).map((l,i)=>({...l,index:i,allowed:Array.isArray(l.allowed)?l.allowed:[]}));const idx=num(currentIndex);const current=idx==null?null:list[idx]||null;return state.lane={lanes:list,currentIndex:idx,recommendedIndex:current?idx:null,confidence:current?.confidence||'unknown',updatedAt:now()};}
+ function laneGuidance(lanes=[],currentIndex=null){const list=(Array.isArray(lanes)?lanes:[]).map((l,i)=>({...l,index:i,allowed:Array.isArray(l.allowed)?l.allowed:[]}));const idx=num(currentIndex);const current=idx==null?null:list[idx]||null;const result=state.lane={lanes:list,currentIndex:idx,recommendedIndex:current?idx:null,confidence:current?.confidence||'unknown',updatedAt:now()};emit('nema:lane-guidance',result);return result;}
  function landmarkGuidance(items=[],position=null){const list=(Array.isArray(items)?items:[]).filter(Boolean).sort((a,b)=>num(a.distanceM,Infinity)-num(b.distanceM,Infinity));return state.landmark={next:list[0]||null,position,updatedAt:now()};}
  function energyEstimate({distanceM=0,elevationGainM=0,consumptionPer100=0,batteryKwh=null,fuelLiters=null}={}){const d=Math.max(0,num(distanceM,0)),elevation=Math.max(0,num(elevationGainM,0)),base=Math.max(0,num(consumptionPer100,0))*d/100,penalty=elevation*.002;return{distanceM:d,energyKwh:batteryKwh!=null?base+penalty:null,fuelLiters:fuelLiters!=null?base+penalty:null,estimatedConsumption:base+penalty};}
  function status(){return{preferences:{...state.preferences},waypoints:state.waypoints.length,activeIncidents:activeIncidents().length,reports:state.reports.length,lane:!!state.lane,landmark:!!state.landmark,lastPlan:state.lastPlan?{provider:state.lastPlan.provider,score:state.lastPlan.selectionScore}:null};}
