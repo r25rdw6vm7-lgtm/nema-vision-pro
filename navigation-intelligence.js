@@ -1,4 +1,4 @@
-/* NEMA Drive Navigation - Intelligence Engine v2
+/* NEMA Drive Navigation - Intelligence Engine v3
  * Map-matched progress approximation, maneuver state, ETA, reroute policy,
  * GPS quality and data freshness. No enforcement evasion logic.
  */
@@ -19,7 +19,7 @@
  function drivingSafety(speed,limit){const s=num(speed),l=num(limit);if(s==null||l==null)return {status:'unknown',deltaKmh:null};const delta=Math.round(s-l);return {status:delta>2?'over-limit':delta>0?'near-limit':'within-limit',deltaKmh:delta};}
  function nearestEnforcement(position,items,maxM=5000){return (items||[]).filter(x=>x.verified!==false&&num(x.distanceM)>=0&&num(x.distanceM)<=maxM).sort((a,b)=>a.distanceM-b.distanceM)[0]||null;}
  function rerouteAllowed(now=Date.now(),cooldownMs=15000){return !state.reroutePending&&now-state.lastRerouteAt>=cooldownMs;}
- async function reroute(){if(!rerouteAllowed()||!window.NEMARouteProvider?.route)return false;const nav=window.NEMANavigation?.state;if(!nav?.position||!nav?.route)return false;state.reroutePending=true;state.lastRerouteAt=Date.now();try{const target=window.target;if(!target)return false;await window.NEMARouteProvider.route({from:{lat:nav.position.lat,lon:nav.position.lon},to:target,alternatives:true});state.offRoute=false;return true;}catch(e){return false;}finally{state.reroutePending=false;}}
+ async function reroute(){if(!rerouteAllowed()||!window.NEMARouteProvider?.route)return false;const nav=window.NEMANavigation?.state;if(!nav?.position||!nav?.route)return false;const target=nav.destination;if(!target)return false;state.reroutePending=true;state.lastRerouteAt=Date.now();try{const result=await window.NEMARouteProvider.route({from:{lat:nav.position.lat,lon:nav.position.lon},to:{lat:target.lat,lon:target.lon},alternatives:true});if(result&&window.NEMANavigation?.setRoute)window.NEMANavigation.setRoute(result);state.offRoute=false;emit('nema:reroute',result||null);return !!result;}catch(e){emit('nema:reroute-error',{message:e?.message||'Reroute failed'});return false;}finally{state.reroutePending=false;}}
  function emit(name,detail){if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent(name,{detail}));}
  window.NEMANavigationIntelligence={state,snapshot,distanceM,routeLength,nearestProgress,update,gpsQuality,dataHealth,drivingSafety,nearestEnforcement,rerouteAllowed,reroute};
 })();
