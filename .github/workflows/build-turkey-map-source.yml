@@ -1,0 +1,48 @@
+name: Build Turkey map source pack
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 3 * * 1'
+
+jobs:
+  source-pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Download current Turkey OSM extract
+        run: |
+          set -euo pipefail
+          mkdir -p build/map
+          curl -fL --retry 3 --retry-delay 5 \
+            https://download.geofabrik.de/europe/turkey-latest.osm.pbf \
+            -o build/map/turkey-latest.osm.pbf
+          sha256sum build/map/turkey-latest.osm.pbf | tee build/map/turkey-latest.osm.pbf.sha256
+          stat -c '%s bytes' build/map/turkey-latest.osm.pbf
+
+      - name: Write source manifest
+        run: |
+          set -euo pipefail
+          SHA=$(cut -d' ' -f1 build/map/turkey-latest.osm.pbf.sha256)
+          SIZE=$(stat -c '%s' build/map/turkey-latest.osm.pbf)
+          cat > build/map/manifest.json <<EOF
+          {
+            "schemaVersion": 1,
+            "region": "TR",
+            "source": "OpenStreetMap / Geofabrik Turkey",
+            "license": "ODbL",
+            "artifact": "turkey-latest.osm.pbf",
+            "sha256": "$SHA",
+            "bytes": $SIZE,
+            "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "status": "raw-source",
+            "warning": "Raw PBF is source data and is not directly routable by the NEMA web client."
+          }
+          EOF
+
+      - name: Package source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEMA-Drive-Turkey-OSM-Source
+          path: build/map/
+          retention-days: 7
