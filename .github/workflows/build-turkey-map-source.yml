@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: '30 3 * * 1'
 
+permissions:
+  contents: read
+
 jobs:
   source-pack:
     runs-on: ubuntu-latest
@@ -14,11 +17,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/map
-          curl -fL --retry 3 --retry-delay 5 \
+          curl -fL --retry 5 --retry-delay 5 --connect-timeout 30 \
             https://download.geofabrik.de/europe/turkey-latest.osm.pbf \
             -o build/map/turkey-latest.osm.pbf
+
+      - name: Validate source extract
+        run: |
+          set -euo pipefail
+          SIZE=$(stat -c '%s' build/map/turkey-latest.osm.pbf)
+          test "$SIZE" -gt 100000000
           sha256sum build/map/turkey-latest.osm.pbf | tee build/map/turkey-latest.osm.pbf.sha256
-          stat -c '%s bytes' build/map/turkey-latest.osm.pbf
+          printf 'Turkey OSM PBF validated: %s bytes\n' "$SIZE"
 
       - name: Write source manifest
         run: |
@@ -27,7 +36,7 @@ jobs:
           SIZE=$(stat -c '%s' build/map/turkey-latest.osm.pbf)
           cat > build/map/manifest.json <<EOF
           {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "region": "TR",
             "source": "OpenStreetMap / Geofabrik Turkey",
             "license": "ODbL",
@@ -36,7 +45,9 @@ jobs:
             "bytes": $SIZE,
             "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "status": "raw-source",
-            "warning": "Raw PBF is source data and is not directly routable by the NEMA web client."
+            "routable": false,
+            "renderable": false,
+            "warning": "Raw PBF is source data and is not directly routable or renderable by the NEMA web client."
           }
           EOF
 
@@ -45,4 +56,5 @@ jobs:
         with:
           name: NEMA-Drive-Turkey-OSM-Source
           path: build/map/
-          retention-days: 7
+          retention-days: 14
+          if-no-files-found: error
